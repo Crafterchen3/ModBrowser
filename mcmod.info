@@ -1,0 +1,16 @@
+[
+{
+  "modid": "modbrowser",
+  "name": "ModBrowser",
+  "description": "Its a Mod which can install other mods.",
+  "version": "${version}",
+  "mcversion": "${mcversion}",
+  "url": "",
+  "updateUrl": "",
+  "authorList": ["Crafterchen3"],
+  "credits": "Mondanzo for the api",
+  "logoFile": "",
+  "screenshots": [],
+  "dependencies": []
+}
+]
