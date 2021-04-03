@@ -67,7 +67,7 @@ public class GuiGetMods extends GuiScreen {
         this.buttonList.add(new GuiButton(203,80,this.height-40,60,20,"Search"));
         this.buttonList.add(new GuiButton(204,this.width-65,5,60,20,"Setup"));
         this.buttonList.add(new GuiButton(205,this.width - 85,this.height-75,60,20,"Add"));
-        this.buttonList.add(new TextureButton(206,this.width/2+20,5,20,20,""));
+        this.buttonList.add(new TextureButton(206,this.width/2+20,5,20,20,"","modbrowser:textures/gui/carticon.png"));
 
         //init List & Searchbar:
         this.guiSlotModList = new GuiSlotModList(mc,this.width / 2 - 40,this.height - 85,35,this.height - 50,20,33,modlist, this);

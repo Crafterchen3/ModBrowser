@@ -9,11 +9,12 @@ import java.io.IOException;
 
 public class TextureButton extends GuiButton {
 
-    public static ResourceLocation res = new ResourceLocation( "modbrowser"+ ":" + "textures/gui/carticon.png");
+    public ResourceLocation res;
     private Minecraft mc = Minecraft.getMinecraft();
 
-    public TextureButton(int buttonId, int x, int y, int widthIn, int heightIn, String buttonText){
+    public TextureButton(int buttonId, int x, int y, int widthIn, int heightIn, String buttonText, String Resource){
         super(buttonId, x, y, widthIn, heightIn, buttonText);
+        this.res = new ResourceLocation(Resource);
     }
 
     public void drawButton(Minecraft mc, int mouseX, int mouseY, float partialTicks) {
