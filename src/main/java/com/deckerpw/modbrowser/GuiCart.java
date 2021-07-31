@@ -1,5 +1,6 @@
 package com.deckerpw.modbrowser;
 
+import com.deckerpw.modbrowser.objects.File;
 import com.deckerpw.modbrowser.objects.Mod;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiScreen;
@@ -12,6 +13,7 @@ public class GuiCart extends GuiScreen {
     public GuiGetMods parent;
     private GuiSlotModList guiSlotModList;
     private int selected;
+    private GuiLog log;
 
     public GuiCart(GuiGetMods parent){
         this.parent = parent;
@@ -21,6 +23,7 @@ public class GuiCart extends GuiScreen {
     public void drawScreen(int mouseX, int mouseY, float partialTicks) {
         this.drawDefaultBackground();
         guiSlotModList.drawScreen(mouseX,mouseY,partialTicks);
+        log.drawScreen(mouseX,mouseY,partialTicks);
         super.drawScreen(mouseX, mouseY, partialTicks);
 
     }
@@ -34,7 +37,8 @@ public class GuiCart extends GuiScreen {
         this.buttonList.add(new GuiButton(223,this.width-110,110,90,20,"Clear"));
         this.buttonList.add(new GuiButton(224,this.width-110,this.height-40,90,20,"Cancel"));
 
-        guiSlotModList = new GuiSlotModList(mc,this.width-150,this.height-40,20,this.height-20,20,30,parent.cartlist,this);
+        guiSlotModList = new GuiSlotModList(mc,(this.width-150)/2,this.height-40,20,this.height-20,20,30,parent.cartlist,this);
+        this.log = new GuiLog(mc,(this.width-150)/2,this.height-40,20,this.height - 20,((this.width/2)-(((this.width-150)/2)/2))+20,60,this);
     }
 
     public void elementClicked(int index){
@@ -64,19 +68,27 @@ public class GuiCart extends GuiScreen {
                 super.run();
                 if(button.enabled) {
                     if (button.id == 220) {
+                        log.addText("\nStarting download:\n");
                         for (Mod item : parent.cartlist) {
                             try {
-                                parent.curseforge.dowloadMod(item.getId());
+                                ArrayList<File> files =  parent.curseforge.getModFiles(item.id);
+                                parent.curseforge.downloadFile(files.get(0));
+                                log.addText("downloaded "+item.name);
                             } catch (IOException e) {
                                 e.printStackTrace();
                             }
                         }
+                        log.addText("\nRestart Minecraft to aquire chnages.");
                         parent.cartlist.clear();
                         guiSlotModList.setMods(parent.cartlist);
                     }
                     if (button.id == 221) {
                         try {
-                            parent.curseforge.dowloadMod(parent.cartlist.get(selected).getId());
+                            log.addText("\nStarting download\n");
+                            ArrayList<File> files =  parent.curseforge.getModFiles(parent.cartlist.get(selected).id);
+                            parent.curseforge.downloadFile(files.get(0));
+                            log.addText("downloaded "+parent.cartlist.get(selected).name);
+                            log.addText("\nRestart Minecraft to aquire chnages.");
                         } catch (IOException e) {
                             e.printStackTrace();
                         }

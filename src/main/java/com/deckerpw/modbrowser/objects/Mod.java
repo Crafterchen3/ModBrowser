@@ -1,41 +1,19 @@
 package com.deckerpw.modbrowser.objects;
 
-public class Mod{
 
-    String id;
-    String name;
-    String description;
-    String authors;
+public class Mod {
 
-    public String getId() {
-        return id;
-    }
+    public int id;
+    public String name;
+    public String description;
+    public String authors = "";
 
-    public void setId(String id) {
+
+    public Mod(int id, String name){
         this.id = id;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
         this.name = name;
     }
 
-    public String getDescription() {
-        return description;
-    }
+    public Mod(){ }
 
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public String getAuthors() {
-        return authors;
-    }
-
-    public void setAuthors(String authors) {
-        this.authors = authors;
-    }
 }

@@ -12,20 +12,19 @@ import net.minecraftforge.fml.client.GuiScrollingList;
 import java.util.ArrayList;
 import java.util.List;
 
-public class GuiInfo extends GuiScrollingList {
+public class GuiLog extends GuiScrollingList {
 
-    private GuiGetMods parent;
+    private GuiCart parent;
     private Mod mod;
     private List<String> stringList;
     private List<ITextComponent> lines = null;
 
 
-    public GuiInfo(Minecraft client, int width, int height, int top, int bottom, int left, int entryHeight, GuiGetMods rparent) {
+    public GuiLog(Minecraft client, int width, int height, int top, int bottom, int left, int entryHeight, GuiCart rparent) {
         super(client, width, height, top, bottom, left, entryHeight);
         this.parent = rparent;
-        this.mod = parent.getSelectedMod();
         stringList = new ArrayList<String>();
-        stringList.add(this.mod.description);
+        stringList.add("Log:");
         lines = resizeContent(stringList);
         this.setHeaderInfo(true,getHeaderHeight());
     }
@@ -33,7 +32,6 @@ public class GuiInfo extends GuiScrollingList {
 
     @Override
     public void drawScreen(int mouseX, int mouseY, float partialTicks) {
-        this.mod = parent.getSelectedMod();
         super.drawScreen(mouseX, mouseY, partialTicks);
     }
 
@@ -56,7 +54,7 @@ public class GuiInfo extends GuiScrollingList {
             int maxTextLength = this.listWidth - 8;
             if (maxTextLength >= 0)
             {
-                ret.addAll(GuiUtilRenderComponents.splitText(chat, maxTextLength, parent.fontRenderer, false, true));
+                ret.addAll(GuiUtilRenderComponents.splitText(chat, maxTextLength, parent.parent.fontRenderer, false, true));
             }
         }
         return ret;
@@ -71,7 +69,7 @@ public class GuiInfo extends GuiScrollingList {
             if (line != null)
             {
                 GlStateManager.enableBlend();
-                parent.fontRenderer.drawStringWithShadow(line.getFormattedText(), this.left + 4, top, 0xFFFFFF);
+                parent.parent.fontRenderer.drawStringWithShadow(line.getFormattedText(), this.left + 4, top, 0xFFFFFF);
                 GlStateManager.disableAlpha();
                 GlStateManager.disableBlend();
             }
@@ -84,11 +82,8 @@ public class GuiInfo extends GuiScrollingList {
         super.clickHeader(x, y);
     }
 
-    public void setMod(Mod mod) {
-        this.mod = mod;
-        String str = mod.name +"\nmade by: "+mod.authors+"\n\n"+mod.description;
-        this.stringList.clear();
-        this.stringList.add(str);
+    public void addText(String text) {
+        this.stringList.add(text);
         this.lines = resizeContent(stringList);
     }
 
@@ -112,4 +107,5 @@ public class GuiInfo extends GuiScrollingList {
     protected void drawSlot(int slotIdx, int entryRight, int slotTop, int slotBuffer, Tessellator tess) {
 
     }
+
 }

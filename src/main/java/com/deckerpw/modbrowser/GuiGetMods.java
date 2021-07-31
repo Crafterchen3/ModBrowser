@@ -54,7 +54,7 @@ public class GuiGetMods extends GuiScreen {
         curseforge = new Curseforge();
         System.out.println("PAGE= "+ page);
         try {
-            modlist = curseforge.getMods("","1.12.2",page);
+            modlist = curseforge.getMods("1.12.2","",page);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -65,7 +65,6 @@ public class GuiGetMods extends GuiScreen {
         this.buttonList.add(new GuiButton(201,20,this.height-40,20,20,"<"));
         this.buttonList.add(new GuiButton(202,50,this.height-40,20,20,">"));
         this.buttonList.add(new GuiButton(203,80,this.height-40,60,20,"Search"));
-        this.buttonList.add(new GuiButton(204,this.width-65,5,60,20,"Setup"));
         this.buttonList.add(new GuiButton(205,this.width - 85,this.height-75,60,20,"Add"));
         this.buttonList.add(new TextureButton(206,this.width/2+20,5,20,20,"","modbrowser:textures/gui/carticon.png"));
 
@@ -103,7 +102,7 @@ public class GuiGetMods extends GuiScreen {
         } catch (Exception e) {
             e.printStackTrace();
             Mod errormod = new Mod();
-            errormod.setDescription("Unfortunately the description of the mod can not be shown because of non-unicode Letters.  ):");
+            errormod.description = "Unfortunately the description of the mod can not be shown because of non-unicode Letters.  ):";
             info.setMod(errormod);
         }
         guiSlotModList.drawScreen(mouseX,mouseY,partialTicks);
@@ -116,6 +115,16 @@ public class GuiGetMods extends GuiScreen {
     @Override
     protected void actionPerformed(GuiButton button) throws IOException {
         super.actionPerformed(button);
+
+
+        if(button.enabled){
+            if(button.id == 200){
+                mc.gameSettings.saveOptions();
+                mc.displayGuiScreen(lastScreen);
+                lastScreen.initGui();
+            }
+        }
+
         Thread action = new Thread(){
             @Override
             public void run() {
@@ -128,7 +137,7 @@ public class GuiGetMods extends GuiScreen {
                             System.out.println(page);
                             try {
                                 sleep(10);
-                                modlist = curseforge.getMods(searchFilter,"1.12.2",page);
+                                modlist = curseforge.getMods("1.12.2",searchFilter,page);
                                 guiSlotModList.setMods(modlist);
                             } catch (InterruptedException | IOException e) {
                                 e.printStackTrace();
@@ -143,7 +152,7 @@ public class GuiGetMods extends GuiScreen {
                         System.out.println(page);
                         try {
                             sleep(10);
-                            modlist = curseforge.getMods(searchFilter,"1.12.2",page);
+                            modlist = curseforge.getMods("1.12.2",searchFilter,page);
                             guiSlotModList.setMods(modlist);
                         } catch (InterruptedException | IOException e) {
                             e.printStackTrace();
@@ -155,7 +164,7 @@ public class GuiGetMods extends GuiScreen {
                         searchFilter = search.getText();
                         try {
                             sleep(10);
-                            modlist = curseforge.getMods(searchFilter,"1.12.2",page);
+                            modlist = curseforge.getMods("1.12.2",searchFilter,page);
                             guiSlotModList.setMods(modlist);
                         } catch (InterruptedException | IOException e) {
                             e.printStackTrace();
@@ -165,16 +174,6 @@ public class GuiGetMods extends GuiScreen {
                         if (!cartlist.contains(modlist.get(selected))){
                             cartlist.add(modlist.get(selected));
                         }
-                    }
-                    if(button.id == 200){
-                        mc.gameSettings.saveOptions();
-                        mc.displayGuiScreen(lastScreen);
-                        try {
-                            sleep(10);
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
-                        }
-                        lastScreen.initGui();
                     }
 
                 }
