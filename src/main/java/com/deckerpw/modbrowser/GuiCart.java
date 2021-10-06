@@ -38,7 +38,7 @@ public class GuiCart extends GuiScreen {
         this.buttonList.add(new GuiButton(224,this.width-110,this.height-40,90,20,"Cancel"));
 
         guiSlotModList = new GuiSlotModList(mc,(this.width-150)/2,this.height-40,20,this.height-20,20,30,parent.cartlist,this);
-        this.log = new GuiLog(mc,(this.width-150)/2,this.height-40,20,this.height - 20,((this.width/2)-(((this.width-150)/2)/2))+20,60,this);
+        this.log = new GuiLog(mc,((this.width-150)/2)-20,this.height-40,20,this.height - 20,((this.width-150)/2)+40,60,this);
     }
 
     public void elementClicked(int index){
@@ -78,7 +78,7 @@ public class GuiCart extends GuiScreen {
                                 e.printStackTrace();
                             }
                         }
-                        log.addText("\nRestart Minecraft to aquire chnages.");
+                        log.addText("\nRestart Minecraft to aquire changes.");
                         parent.cartlist.clear();
                         guiSlotModList.setMods(parent.cartlist);
                     }
@@ -88,7 +88,7 @@ public class GuiCart extends GuiScreen {
                             ArrayList<File> files =  parent.curseforge.getModFiles(parent.cartlist.get(selected).id);
                             parent.curseforge.downloadFile(files.get(0));
                             log.addText("downloaded "+parent.cartlist.get(selected).name);
-                            log.addText("\nRestart Minecraft to aquire chnages.");
+                            log.addText("\nRestart Minecraft to aquire changes.");
                         } catch (IOException e) {
                             e.printStackTrace();
                         }

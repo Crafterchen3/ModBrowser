@@ -65,7 +65,7 @@ public class Curseforge {
 
 
     public ArrayList<Mod> getMods(String gameVersion,String searchFilter,int page) throws IOException {
-        searchFilter.replaceAll(" ","%20");
+        searchFilter = searchFilter.replaceAll(" ","%20");
         String searchURL = base_url+"search?gameId=432&sectionId=6&pageSize=20&gameVersion="+gameVersion+"&index="+page+"&searchFilter="+searchFilter;
         System.out.println(searchURL);
         String result = readURL(searchURL);
@@ -82,6 +82,7 @@ public class Curseforge {
             mod.name = "Sorry";
             mods.add(mod);
         }
+
         return mods;
     }
 
