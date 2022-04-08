@@ -11,6 +11,8 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Objects;
 import java.util.Scanner;
 
 import static com.deckerpw.modbrowser.ModBrowser.*;
@@ -24,6 +26,18 @@ public class Curseforge {
         String out = new Scanner(new URL(mURL).openStream(), "UTF-8").useDelimiter("\\A").next();
         return out;
     }
+
+    public ArrayList<File> getDependencies(int identifier) throws IOException {
+        JSONObject file = getModFilesJSON(identifier);
+        ArrayList<File> dependencies = new ArrayList<File>();
+        JSONArray dependenciesJSON = file.getJSONArray("dependencies");
+        for (int i = 0; i < dependenciesJSON.length(); i++) {
+            dependencies.add(getModFile(dependenciesJSON.getJSONObject(i).getInt("addonId")));
+            dependencies.addAll(getDependencies(dependenciesJSON.getJSONObject(i).getInt("addonId")));
+        }
+        return dependencies;
+    }
+
 
     public void downloadFile(File file) throws IOException {
         InputStream in = new URL(file.downloadUrl).openStream();
@@ -49,9 +63,10 @@ public class Curseforge {
         return mod;
     }
 
-    private File jsonToFile(JSONObject obj){
+    private File jsonToFile(JSONObject obj,int modId) throws IOException {
         File file = new File();
         file.id = obj.getInt("id");
+        file.mod = getMod(modId);
         file.fileName = obj.getString("fileName");
         file.downloadUrl = obj.getString("downloadUrl");
         ArrayList<String> gameVersions = new ArrayList<>();
@@ -86,21 +101,47 @@ public class Curseforge {
         return mods;
     }
 
-    public ArrayList<File> getModFiles(int identifier) throws IOException {
+    public File getModFile(int identifier) throws IOException {
+        String searchURL = base_url+identifier+"/files";
+        System.out.println(searchURL);
+        String result = readURL(searchURL);
+        File file = null;
+        jsonArray = new JSONArray(result);
+        for (int i=0;i<jsonArray.length();i++){
+            JSONObject JSONfile = jsonArray.getJSONObject(i);
+            JSONArray gameVersion = JSONfile.getJSONArray("gameVersion");
+            for (int j = 0; j < gameVersion.length(); j++) {
+                if (Objects.equals(gameVersion.getString(j), "1.12.2")){
+                    file = jsonToFile(JSONfile,identifier);
+                    return file;
+                }
+            }
+        }
+        return file;
+
+    }
+
+    private JSONObject getModFilesJSON(int identifier) throws IOException {
+        JSONObject jsonObject = null;
         String searchURL = base_url+identifier+"/files";
         System.out.println(searchURL);
         String result = readURL(searchURL);
         jsonArray = new JSONArray(result);
-        ArrayList<File> files = new ArrayList<>();
+        ArrayList<JSONObject> files = new ArrayList<>();
         for (int i=0;i<jsonArray.length();i++){
-            File file = jsonToFile(jsonArray.getJSONObject(i));
-            if (file.gameVersions.contains("1.12.2")){
-                files.add(file);
+            JSONObject file = jsonArray.getJSONObject(i);
+            JSONArray gameVersion = file.getJSONArray("gameVersion");
+            for (int j = 0; j < gameVersion.length(); j++) {
+                if (Objects.equals(gameVersion.getString(j), "1.12.2")){
+                    jsonObject = file;
+                    return jsonObject;
+                }
             }
         }
 
-        return files;
+        return jsonObject;
     }
+
 
     public Mod getMod(int identifier) throws IOException {
         String searchURL = base_url+identifier;
@@ -125,8 +166,6 @@ public class Curseforge {
         System.out.println(jsonArray);
         Mod mod = getMod(mods.get(0).id);
         System.out.println(mod);
-        ArrayList<File> files = getModFiles(mod.id);
-        System.out.println(files);
     }
 
 

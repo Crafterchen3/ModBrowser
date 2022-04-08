@@ -104,7 +104,7 @@ jar.finalizedBy('reobfJar')
 //publish.dependsOn('reobfJar')
 
 dependencies{
-    implementation 'org.json:json:20140107'
+    implementation 'org.json:json:20220320'
 }
 
 publishing {
@@ -118,4 +118,8 @@ publishing {
             url "file:///${project.projectDir}/mcmodsrepo"
         }
     }
+}
+
+repositories {
+    mavenCentral()
 }

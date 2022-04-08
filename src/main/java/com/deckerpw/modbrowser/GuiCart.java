@@ -11,21 +11,12 @@ import java.util.ArrayList;
 public class GuiCart extends GuiScreen {
 
     public GuiGetMods parent;
-    private GuiSlotModList guiSlotModList;
+    private GuiSlotFileList guiSlotFileList;
     private int selected;
     private GuiLog log;
 
     public GuiCart(GuiGetMods parent){
         this.parent = parent;
-    }
-
-    @Override
-    public void drawScreen(int mouseX, int mouseY, float partialTicks) {
-        this.drawDefaultBackground();
-        guiSlotModList.drawScreen(mouseX,mouseY,partialTicks);
-        log.drawScreen(mouseX,mouseY,partialTicks);
-        super.drawScreen(mouseX, mouseY, partialTicks);
-
     }
 
     @Override
@@ -37,9 +28,19 @@ public class GuiCart extends GuiScreen {
         this.buttonList.add(new GuiButton(223,this.width-110,110,90,20,"Clear"));
         this.buttonList.add(new GuiButton(224,this.width-110,this.height-40,90,20,"Cancel"));
 
-        guiSlotModList = new GuiSlotModList(mc,(this.width-150)/2,this.height-40,20,this.height-20,20,30,parent.cartlist,this);
+        guiSlotFileList = new GuiSlotFileList(mc,(this.width-150)/2,this.height-40,20,this.height-20,20,30,parent.cartlist,this);
         this.log = new GuiLog(mc,((this.width-150)/2)-20,this.height-40,20,this.height - 20,((this.width-150)/2)+40,60,this);
     }
+
+
+    @Override
+    public void drawScreen(int mouseX, int mouseY, float partialTicks) {
+        this.drawDefaultBackground();
+        guiSlotFileList.drawScreen(mouseX,mouseY,partialTicks);
+        log.drawScreen(mouseX,mouseY,partialTicks);
+        super.drawScreen(mouseX,mouseY,partialTicks);
+    }
+
 
     public void elementClicked(int index){
         this.selected = index;
@@ -51,11 +52,11 @@ public class GuiCart extends GuiScreen {
         if(button.enabled){
             if(button.id == 222){
                 parent.cartlist.remove(selected);
-                guiSlotModList.setMods(parent.cartlist);
+                guiSlotFileList.setFiles(parent.cartlist);
             }
             if(button.id == 223){
                 parent.cartlist.clear();
-                guiSlotModList.setMods(parent.cartlist);
+                guiSlotFileList.setFiles(parent.cartlist);
             }
             if(button.id == 224){
                 mc.displayGuiScreen(parent);
@@ -69,31 +70,28 @@ public class GuiCart extends GuiScreen {
                 if(button.enabled) {
                     if (button.id == 220) {
                         log.addText("\nStarting download:\n");
-                        for (Mod item : parent.cartlist) {
+                        for (File item : parent.cartlist) {
                             try {
-                                ArrayList<File> files =  parent.curseforge.getModFiles(item.id);
-                                parent.curseforge.downloadFile(files.get(0));
-                                log.addText("downloaded "+item.name);
+                                parent.curseforge.downloadFile(item);
                             } catch (IOException e) {
                                 e.printStackTrace();
                             }
                         }
                         log.addText("\nRestart Minecraft to aquire changes.");
                         parent.cartlist.clear();
-                        guiSlotModList.setMods(parent.cartlist);
+                        guiSlotFileList.setFiles(parent.cartlist);
                     }
                     if (button.id == 221) {
                         try {
                             log.addText("\nStarting download\n");
-                            ArrayList<File> files =  parent.curseforge.getModFiles(parent.cartlist.get(selected).id);
-                            parent.curseforge.downloadFile(files.get(0));
-                            log.addText("downloaded "+parent.cartlist.get(selected).name);
+                            parent.curseforge.downloadFile(parent.cartlist.get(selected));
+                            log.addText("downloaded "+parent.cartlist.get(selected).mod.name);
                             log.addText("\nRestart Minecraft to aquire changes.");
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
                         parent.cartlist.remove(selected);
-                        guiSlotModList.setMods(parent.cartlist);
+                        guiSlotFileList.setFiles(parent.cartlist);
                     }
                 }
             }

@@ -19,39 +19,41 @@
 
 package com.deckerpw.modbrowser;
 
-import java.util.ArrayList;
-
+import com.deckerpw.modbrowser.objects.File;
 import com.deckerpw.modbrowser.objects.Mod;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraftforge.fml.client.GuiScrollingList;
 
+import java.util.ArrayList;
+
 /**
  * @author cpw
  *
  */
-public class GuiSlotModList extends GuiScrollingList
+public class GuiSlotFileList extends GuiScrollingList
 {
 
-    private ArrayList<Mod> mods;
+    private ArrayList<File> files;
     private GuiGetMods parent;
     private GuiCart parent2;
     private boolean isCart;
 
-    public GuiSlotModList(Minecraft client, int width, int height, int top, int bottom, int left, int entryHeight, ArrayList<Mod> mods, GuiGetMods parent) {
-        super(client, width, height, top, bottom, left, entryHeight);
-        this.mods = mods;
-        this.parent = parent;
-    }
 
+    public GuiSlotFileList(Minecraft client, int width, int height, int top, int bottom, int left, int entryHeight, ArrayList<File> files, GuiCart parent) {
+        super(client, width, height, top, bottom, left, entryHeight);
+        this.files = files;
+        this.parent2 = parent;
+        this.isCart = true;
+    }
 
 
 
     @Override
     protected int getSize()
     {
-        return mods.size();
+        return files.size();
     }
 
     @Override
@@ -82,8 +84,8 @@ public class GuiSlotModList extends GuiScrollingList
 
     }
 
-    protected void setMods(ArrayList<Mod> mods){
-        this.mods = mods;
+    protected void setFiles(ArrayList<File> files){
+        this.files = files;
     }
 
     @Override
@@ -94,7 +96,7 @@ public class GuiSlotModList extends GuiScrollingList
         }else {
             font = this.parent.getFontRenderer();
         }
-        font.drawString(font.trimStringToWidth(mods.get(idx).name,    listWidth - 10), this.left + 3 , top +  2, 0xFFFFFF);
-        font.drawString(font.trimStringToWidth(mods.get(idx).authors, listWidth - (5 + height)), this.left + 3 , top + 12, 0xCCCCCC);
+        font.drawString(font.trimStringToWidth(files.get(idx).mod.name,    listWidth - 10), this.left + 3 , top +  2, 0xFFFFFF);
+        font.drawString(font.trimStringToWidth(files.get(idx).mod.authors, listWidth - (5 + height)), this.left + 3 , top + 12, 0xCCCCCC);
     }
 }

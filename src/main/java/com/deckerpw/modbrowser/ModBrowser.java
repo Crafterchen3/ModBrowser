@@ -26,8 +26,6 @@ public class ModBrowser
     public static final String MODID = "modbrowser";
     public static final String NAME = "ModBrowser";
     public static final String VERSION = "1.2";
-    public static File SOURCE;
-    public static String SOURCEPATH;
     public static VersionRange vrs;
 
     static {
@@ -43,7 +41,6 @@ public class ModBrowser
 
     public static String MODPATH;
     public static String MCPATH;
-    public static String NODEPATH;
     private static Logger logger;
     private static Minecraft mc = Minecraft.getMinecraft();
 
@@ -51,11 +48,8 @@ public class ModBrowser
     public void preInit(FMLPreInitializationEvent event)
     {
         logger = event.getModLog();
-        SOURCE = event.getSourceFile();
-        SOURCEPATH = SOURCE.getPath();
-        MCPATH = SOURCEPATH.replace("mods\\"+SOURCE.getName(),"");
-        MODPATH = SOURCEPATH.replace(SOURCE.getName(),"");
-        NODEPATH = MCPATH + "ModBrowser\\";
+        MCPATH = mc.mcDataDir.getPath();
+        MODPATH = Paths.get(MCPATH,"mods").toString();
         System.out.println(MODPATH);
         System.out.println(mc.mcDataDir.getPath());
     }

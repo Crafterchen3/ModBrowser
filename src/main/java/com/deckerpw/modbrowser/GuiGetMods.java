@@ -1,9 +1,11 @@
 package com.deckerpw.modbrowser;
 
+import com.deckerpw.modbrowser.objects.File;
 import com.deckerpw.modbrowser.objects.Mod;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiScreen;
+
 import net.minecraft.client.gui.GuiTextField;
 import net.minecraft.client.resources.I18n;
 
@@ -21,7 +23,7 @@ public class GuiGetMods extends GuiScreen {
     private int page;
     private GuiInfo info;
     private GuiScreen lastScreen;
-    public ArrayList<Mod> cartlist = new ArrayList<Mod>();
+    public ArrayList<File> cartlist = new ArrayList<File>();
     public FontRenderer fontRenderer;
     public Curseforge curseforge;
 
@@ -38,6 +40,7 @@ public class GuiGetMods extends GuiScreen {
 
     public void elementClicked(int index) {
         selected = index;
+        System.out.println(selected);
         info.setMod(modlist.get(selected));
 
     }
@@ -66,7 +69,10 @@ public class GuiGetMods extends GuiScreen {
         this.buttonList.add(new GuiButton(202,50,this.height-40,20,20,">"));
         this.buttonList.add(new GuiButton(203,80,this.height-40,60,20,"Search"));
         this.buttonList.add(new GuiButton(205,this.width - 85,this.height-75,60,20,"Add"));
-        this.buttonList.add(new TextureButton(206,this.width/2+20,5,20,20,"","modbrowser:textures/gui/carticon.png"));
+        this.buttonList.add(new TextureButton(206,this.width-40,5,20,20,"","modbrowser:textures/gui/carticon.png"));
+        //this.buttonList.add(new TextureButton(207,20,5,20,20,"","modbrowser:textures/gui/settingsicon.png"));
+
+
 
         //init List & Searchbar:
         this.guiSlotModList = new GuiSlotModList(mc,this.width / 2 - 40,this.height - 85,35,this.height - 50,20,33,modlist, this);
@@ -171,19 +177,37 @@ public class GuiGetMods extends GuiScreen {
                         }
                     }
                     if(button.id == 205){
-                        if (!cartlist.contains(modlist.get(selected))){
-                            cartlist.add(modlist.get(selected));
+                        boolean exists = false;
+                        for (File file: cartlist) {
+                            if (file.mod.id == modlist.get(selected).id){
+                                exists = true;
+                            }
+                        }
+                        if (!exists){
+
+                            try {
+                                cartlist.add(curseforge.getModFile(modlist.get(selected).id));
+                                cartlist.addAll(curseforge.getDependencies(modlist.get(selected).id));
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
                         }
                     }
 
                 }
             }
         };
+
         action.start();
         if(button.enabled){
             if(button.id == 206){
+
                 mc.displayGuiScreen(new GuiCart(this));
             }
+            //TODO: Add a Settings Gui and Settings Class
+            //if(button.id == 207){
+            //    mc.displayGuiScreen(new GuiSettings(this));
+            //}
         }
 
     }
