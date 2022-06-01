@@ -5,6 +5,10 @@ import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.GuiMainMenu;
 import net.minecraft.init.Blocks;
 import net.minecraftforge.client.event.GuiOpenEvent;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.common.config.Config;
+import net.minecraftforge.common.config.ConfigManager;
+import net.minecraftforge.fml.client.event.ConfigChangedEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.Mod.EventHandler;
 import net.minecraftforge.fml.common.event.FMLInitializationEvent;
@@ -52,6 +56,7 @@ public class ModBrowser
         MODPATH = Paths.get(MCPATH,"mods").toString();
         System.out.println(MODPATH);
         System.out.println(mc.mcDataDir.getPath());
+        MinecraftForge.EVENT_BUS.register(this);
     }
 
 
@@ -62,6 +67,7 @@ public class ModBrowser
     {
         // some example code
         logger.info("DIRT BLOCK >> {}", Blocks.DIRT.getRegistryName());
+        ConfigManager.sync(MODID, Config.Type.INSTANCE);
 
     }
 
@@ -77,4 +83,56 @@ public class ModBrowser
         }
 
     }
+
+    @SubscribeEvent
+    public void onConfigChangedEvent(ConfigChangedEvent.OnConfigChangedEvent event)
+    {
+        if (event.getModID().equals(MODID))
+        {
+            ConfigManager.sync(MODID, Config.Type.INSTANCE);
+        }
+    }
+
+    @Config(modid = MODID,type = Config.Type.INSTANCE)
+    public static class ModBrowserConfig {
+
+        @Config.Name("Automatically search and add Dependencies")
+        public static boolean SearchDependencies = true;
+        @Config.Name("Sorting Field")
+        public static SortType sortType = ModBrowserConfig.SortType.FEATURED;
+        @Config.Name("Sorting Order")
+        public static SortOrder sortOrder = SortOrder.DESCENDING;
+
+
+        public enum SortType {
+            FEATURED(1),
+            POPULARITY(2),
+            LAST_UPDATED(3),
+            NAME(4),
+            AUTHOR(5),
+            TOTAL_DOWNLOADS(6),
+            CATEGORY(7),
+            GAME_VERSION(8);
+
+
+            public int value;
+            SortType(int value){
+                this.value = value;
+            }
+        }
+
+        public enum SortOrder {
+            ASCENDING("asc"),
+            DESCENDING("desc");
+
+
+            public String value;
+            SortOrder(String value){
+                this.value = value;
+            }
+        }
+
+    }
+
+
 }

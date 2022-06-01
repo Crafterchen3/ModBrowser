@@ -2,14 +2,14 @@
 {
   "modid": "modbrowser",
   "name": "ModBrowser",
-  "description": "Its a Mod which can install other mods.",
+  "description": "It's a Mod which can install other mods.",
   "version": "1.0",
   "mcversion": "[1.12,)",
   "url": "",
   "updateUrl": "",
   "authorList": ["Crafterchen3"],
-  "credits": "Mondanzo for the api",
-  "logoFile": "carticon.png",
+  "credits": "CurseForge",
+  "logoFile": "modbrowser-title.png",
   "screenshots": [],
   "dependencies": []
 }

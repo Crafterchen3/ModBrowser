@@ -76,6 +76,7 @@ public class GuiCart extends GuiScreen {
                             } catch (IOException e) {
                                 e.printStackTrace();
                             }
+                            log.addText("downloaded "+item.mod.name);
                         }
                         log.addText("\nRestart Minecraft to aquire changes.");
                         parent.cartlist.clear();

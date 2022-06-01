@@ -96,7 +96,7 @@ public class Curseforge {
 
     public ArrayList<Mod> getMods(String gameVersion,String searchFilter,int page) throws IOException {
         searchFilter = searchFilter.replaceAll(" ","%20");
-        String searchURL = base_url+"search"+gameMeta+"&sortField=1&sortOrder=desc&pageSize=20&gameVersion="+gameVersion+"&index="+page+"&searchFilter="+searchFilter;
+        String searchURL = base_url+"search"+gameMeta+"&sortField="+ModBrowserConfig.sortType.value+"&sortOrder="+ModBrowserConfig.sortOrder.value+"&pageSize=20&gameVersion="+gameVersion+"&index="+page+"&searchFilter="+searchFilter;
         System.out.println(searchURL);
         String result = readURL(new URL(searchURL));
         JSONArray jsonArray = new JSONObject(result).getJSONArray("data");
