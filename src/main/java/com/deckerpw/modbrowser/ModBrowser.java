@@ -1,138 +1,80 @@
 package com.deckerpw.modbrowser;
 
+import com.deckerpw.modbrowser.gui.ModBrowserMainMenuScreen;
+import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.FontRenderer;
-import net.minecraft.client.gui.GuiMainMenu;
-import net.minecraft.init.Blocks;
-import net.minecraftforge.client.event.GuiOpenEvent;
+import net.minecraft.client.gui.screens.TitleScreen;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraftforge.client.event.ScreenOpenEvent;
 import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.common.config.Config;
-import net.minecraftforge.common.config.ConfigManager;
-import net.minecraftforge.fml.client.event.ConfigChangedEvent;
+import net.minecraftforge.event.RegistryEvent;
+import net.minecraftforge.eventbus.api.Event;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.InterModComms;
 import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.common.Mod.EventHandler;
-import net.minecraftforge.fml.common.event.FMLInitializationEvent;
-import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
-import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
-import net.minecraftforge.fml.common.versioning.InvalidVersionSpecificationException;
-import net.minecraftforge.fml.common.versioning.VersionRange;
-import net.minecraftforge.fml.relauncher.Side;
-import org.apache.logging.log4j.Logger;
+import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.minecraftforge.fml.event.lifecycle.InterModEnqueueEvent;
+import net.minecraftforge.fml.event.lifecycle.InterModProcessEvent;
+import net.minecraftforge.event.server.ServerStartingEvent;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 
-import java.io.File;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.util.stream.Collectors;
 
-@Mod(modid = ModBrowser.MODID, name = ModBrowser.NAME, version = ModBrowser.VERSION, acceptedMinecraftVersions = "[1.12.2,1.16.5]")
+// The value here should match an entry in the META-INF/mods.toml file
+@Mod(ModBrowser.MOD_ID)
+public class ModBrowser {
 
-public class ModBrowser
-{
-    public static final String MODID = "modbrowser";
-    public static final String NAME = "ModBrowser";
-    public static final String VERSION = "1.2";
-    public static VersionRange vrs;
-
-    static {
-        try {
-            vrs = VersionRange.createFromVersionSpec("[1.12,)");
-        } catch (InvalidVersionSpecificationException e) {
-            e.printStackTrace();
-        }
-    }
-
-
-
-
+    public final static String MOD_ID = "modbrowser";
     public static String MODPATH;
-    public static String MCPATH;
-    private static Logger logger;
-    private static Minecraft mc = Minecraft.getMinecraft();
 
-    @EventHandler
-    public void preInit(FMLPreInitializationEvent event)
-    {
-        logger = event.getModLog();
-        MCPATH = mc.mcDataDir.getPath();
-        MODPATH = Paths.get(MCPATH,"mods").toString();
-        System.out.println(MODPATH);
-        System.out.println(mc.mcDataDir.getPath());
+    public ModBrowser() {
+        // Register the setup method for modloading
+        FMLJavaModLoadingContext.get().getModEventBus().addListener(this::setup);
+        // Register the enqueueIMC method for modloading
+        FMLJavaModLoadingContext.get().getModEventBus().addListener(this::enqueueIMC);
+        // Register the processIMC method for modloading
+        FMLJavaModLoadingContext.get().getModEventBus().addListener(this::processIMC);
+
+        // Register ourselves for server and other game events we are interested in
         MinecraftForge.EVENT_BUS.register(this);
     }
 
-
-
-
-    @EventHandler
-    public void init(FMLInitializationEvent event)
-    {
-        // some example code
-        logger.info("DIRT BLOCK >> {}", Blocks.DIRT.getRegistryName());
-        ConfigManager.sync(MODID, Config.Type.INSTANCE);
-
+    private void setup(final FMLCommonSetupEvent event) {
+        // Some preinit code
     }
 
-    //to start my gui instead of the default.
-    @Mod.EventBusSubscriber(Side.CLIENT)
-    public static class MyStaticClientOnlyEventHandler {
-        @SubscribeEvent
-        public static void openGui(GuiOpenEvent event) {
-            System.out.println("Found GUI LOL: "+event.getGui());
-            if (event.getGui() instanceof GuiMainMenu){
-                event.setGui(new com.deckerpw.modbrowser.GuiMainMenu());
-            }
-        }
+    private void enqueueIMC(final InterModEnqueueEvent event) {
+        // Some example code to dispatch IMC to another mod
+    }
 
+    private void processIMC(final InterModProcessEvent event) {
+        // Some example code to receive and process InterModComms from other mods
+    }
+
+    // You can use SubscribeEvent and let the Event Bus discover methods to call
+    @SubscribeEvent
+    public void onServerStarting(ServerStartingEvent event) {
+        // Do something when the server starts
+    }
+
+    // You can use EventBusSubscriber to automatically subscribe events on the contained class (this is subscribing to the MOD
+    // Event bus for receiving Registry Events)
+    @Mod.EventBusSubscriber(bus = Mod.EventBusSubscriber.Bus.MOD)
+    public static class RegistryEvents {
+        @SubscribeEvent
+        public static void onBlocksRegistry(final RegistryEvent.Register<Block> blockRegistryEvent) {
+            // Register a new block here
+        }
     }
 
     @SubscribeEvent
-    public void onConfigChangedEvent(ConfigChangedEvent.OnConfigChangedEvent event)
-    {
-        if (event.getModID().equals(MODID))
-        {
-            ConfigManager.sync(MODID, Config.Type.INSTANCE);
+    public void onMainMenu(ScreenOpenEvent e){
+        MODPATH = Minecraft.getInstance().gameDirectory.getPath()+"/mods";
+        if (e.getScreen() != null && e.getScreen().getClass() ==  TitleScreen.class){
+            e.setScreen(new ModBrowserMainMenuScreen(true));
+        }else {
+            e.setResult(Event.Result.ALLOW);
         }
     }
-
-    @Config(modid = MODID,type = Config.Type.INSTANCE)
-    public static class ModBrowserConfig {
-
-        @Config.Name("Automatically search and add Dependencies")
-        public static boolean SearchDependencies = true;
-        @Config.Name("Sorting Field")
-        public static SortType sortType = ModBrowserConfig.SortType.FEATURED;
-        @Config.Name("Sorting Order")
-        public static SortOrder sortOrder = SortOrder.DESCENDING;
-
-
-        public enum SortType {
-            FEATURED(1),
-            POPULARITY(2),
-            LAST_UPDATED(3),
-            NAME(4),
-            AUTHOR(5),
-            TOTAL_DOWNLOADS(6),
-            CATEGORY(7),
-            GAME_VERSION(8);
-
-
-            public int value;
-            SortType(int value){
-                this.value = value;
-            }
-        }
-
-        public enum SortOrder {
-            ASCENDING("asc"),
-            DESCENDING("desc");
-
-
-            public String value;
-            SortOrder(String value){
-                this.value = value;
-            }
-        }
-
-    }
-
-
 }

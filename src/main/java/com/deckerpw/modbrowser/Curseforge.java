@@ -1,20 +1,18 @@
 package com.deckerpw.modbrowser;
 
-import com.deckerpw.modbrowser.objects.Mod;
+import com.deckerpw.modbrowser.gui.component.ModSelectionList;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.Screen;
 import org.json.*;
 
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import com.deckerpw.modbrowser.objects.File;
 
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Objects;
-import java.util.Scanner;
+import java.util.*;
 
 import static com.deckerpw.modbrowser.ModBrowser.*;
 
@@ -22,6 +20,16 @@ public class Curseforge {
 
     private String base_url = "https://api.curseforge.com/v1/mods/";
     private String gameMeta = "?gameId=432&classId=6&modLoaderType=1";
+    private Minecraft mc;
+    private ModSelectionList modSelectionList;
+    private Screen screen;
+
+    public Curseforge(Minecraft mc, ModSelectionList modSelectionList, Screen screen) {
+        this.mc = mc;
+        this.modSelectionList = modSelectionList;
+        this.screen = screen;
+    }
+
     private String apiKey = "$2a$10$ovhZip0zfjpEgB7p2z4TSuKh2861OLVcAeGaKRZlo5jWk6MjRTnu6";
 
     private String readURL(URL mURL) throws IOException {
@@ -59,10 +67,18 @@ public class Curseforge {
         Files.copy(in, Paths.get(MODPATH,file.fileName), StandardCopyOption.REPLACE_EXISTING);
     }
 
-    private Mod jsonToMod(JSONObject obj){
+    public void downloadModAndDependencies(int id) throws IOException {
+        ArrayList<File> downloads = getDependencies(id);
+        downloads.add( getModFile(id));
+        for (File file : downloads) {
+            downloadFile(file);
+        }
+    }
+
+    private ModSelectionList.ModListEntry jsonToMod(JSONObject obj) throws IOException {
         Mod mod = new Mod();
         mod.id = obj.getInt("id");
-        mod.name = obj.optString("name");
+        mod.title = obj.optString("name");
         JSONArray arr = obj.getJSONArray("authors");
         String result = "";
         for(int i=0;i < arr.length();i++){
@@ -74,8 +90,9 @@ public class Curseforge {
             }
         }
         mod.authors = result;
+        mod.category = getCategory(obj);
         mod.description = obj.getString("summary");
-        return mod;
+        return new ModSelectionList.ModListEntry(this.mc,this.modSelectionList,this.screen,mod, this);
     }
 
     private File jsonToFile(JSONObject obj,int modId) throws IOException {
@@ -93,32 +110,45 @@ public class Curseforge {
         return file;
     }
 
+    public String getCategory(JSONObject obj){
+        int primary = obj.getInt("primaryCategoryId");
+        JSONArray categories = obj.getJSONArray("categories");
+        for (int i = 0; i < categories.length(); i++) {
+            JSONObject category = categories.getJSONObject(i);
+            if(category.getInt("id") == primary){
+                return category.getString("name");
+            }
+        }
+        return "";
+    }
 
-    public ArrayList<Mod> getMods(String gameVersion,String searchFilter,int page) throws IOException {
+    public List<ModSelectionList.ModListEntry> getMods(String gameVersion, String searchFilter, int page,int pageSize) throws IOException {
         searchFilter = searchFilter.replaceAll(" ","%20");
-        String searchURL = base_url+"search"+gameMeta+"&sortField="+ModBrowserConfig.sortType.value+"&sortOrder="+ModBrowserConfig.sortOrder.value+"&pageSize=20&gameVersion="+gameVersion+"&index="+page+"&searchFilter="+searchFilter;
-        System.out.println(searchURL);
+        String searchURL = base_url+"search"+gameMeta+"&sortField="+1+"&sortOrder="+"desc"+"&pageSize="+pageSize+"&gameVersion="+gameVersion+"&index="+page+"&searchFilter="+searchFilter;
+        //TODO add Config:
+        // String searchURL = base_url+"search"+gameMeta+"&sortField="+ModBrowserConfig.sortType.value+"&sortOrder="+ModBrowserConfig.sortOrder.value+"&pageSize=20&gameVersion="+gameVersion+"&index="+page+"&searchFilter="+searchFilter;
+        //System.out.println(searchURL);
         String result = readURL(new URL(searchURL));
         JSONArray jsonArray = new JSONObject(result).getJSONArray("data");
-        ArrayList<Mod> mods = new ArrayList<>();
+        List<ModSelectionList.ModListEntry> mods = new ArrayList<>();
         for (int i=0;i<jsonArray.length();i++){
             mods.add(jsonToMod(jsonArray.getJSONObject(i)));
         }
         if (mods.size() == 0){
             Mod mod = new Mod();
-            mod.description = "Unfortunately no Mod has been found";
+            mod.category = "Unfortunately no Mod has been found";
             mod.id = -54; //a special code so you won't be able to download
             mod.authors = "):";
-            mod.name = "Sorry";
-            mods.add(mod);
+            mod.title = "Sorry";
+            mods.add(new ModSelectionList.ModListEntry(mc,modSelectionList,screen,mod, this));
         }
 
         return mods;
     }
 
     public File getModFile(int identifier) throws IOException {
-        String searchURL = base_url+identifier+"/files?gameVersion=1.12.2&modLoaderType=1";
-        System.out.println(searchURL);
+        String searchURL = base_url+identifier+"/files?gameVersion=1.18.2&modLoaderType=1";
+        //System.out.println(searchURL);
         String result = readURL(new URL(searchURL));
         JSONArray files = new JSONObject(result).getJSONArray("data");
         return jsonToFile(files.getJSONObject(0),identifier);
@@ -128,7 +158,7 @@ public class Curseforge {
     private JSONObject getModFilesJSON(int identifier) throws IOException {
         JSONObject jsonObject = null;
         String searchURL = base_url+identifier+"/files?gameVersion=1.12.2&modLoaderType=1";
-        System.out.println(searchURL);
+        //System.out.println(searchURL);
         String result = readURL(new URL(searchURL));
         JSONArray files = new JSONObject(result).getJSONArray("data");
 
@@ -137,12 +167,12 @@ public class Curseforge {
     }
 
 
-    public Mod getMod(int identifier) throws IOException {
+    public ModSelectionList.ModListEntry getMod(int identifier) throws IOException {
         String searchURL = base_url+identifier;
-        System.out.println(searchURL);
+        //System.out.println(searchURL);
         String result = readURL(new URL(searchURL));
         JSONObject obj = new JSONObject(result).getJSONObject("data");
-        Mod mod = jsonToMod(obj);
+        ModSelectionList.ModListEntry mod = jsonToMod(obj);
         return mod;
     }
 
