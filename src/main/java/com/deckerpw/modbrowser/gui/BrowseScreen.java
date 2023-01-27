@@ -45,7 +45,7 @@ public class BrowseScreen extends Screen {
     public static final ResourceLocation DEFAULT_ICON = new ResourceLocation("textures/misc/unknown_pack.png");
     private Screen lastScreen;
     private Curseforge cf;
-    private Thread refreshthr;
+    private Thread thread;
     private EditBox searchBox;
     private ModSelectionList modList;
     private int index = 0;
@@ -55,9 +55,31 @@ public class BrowseScreen extends Screen {
         this.lastScreen = lastScreen;
     }
 
+    public void loadMore(){
+        thread.stop();
+        thread = new Thread(() -> {
+            try {
+                this.modList.children().addAll(cf.getMods("1.18.2", searchBox.getValue(), index, 1));
+                index++;
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        });
+        thread.start();
+    }
+
     private void refresh(){
+        thread.stop();
         index = 0;
-        modList.children().clear();
+        modList.children().clear();thread = new Thread(() -> {
+            try {
+                this.modList.children().addAll(cf.getMods("1.18.2", searchBox.getValue(), index, 1));
+                index++;
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        });
+        thread.start();
     }
 
     @Override
@@ -70,15 +92,6 @@ public class BrowseScreen extends Screen {
 
         this.addWidget(modList);
         this.searchBox = new EditBox(this.font, this.width / 2 - 100, 22, 200, 20, this.searchBox, new TranslatableComponent("browse.search"));
-        refreshthr = new Thread(() -> {
-            while (true) {
-                try {
-                    this.modList.children().addAll(cf.getMods("1.18.2", searchBox.getValue(), index, 1));
-                } catch (IOException e) {
-                }
-                index++;
-            }
-        });
         this.searchBox.setResponder((p_101362_) -> {
             refresh();
         });
@@ -90,8 +103,15 @@ public class BrowseScreen extends Screen {
         }));
 
         this.setInitialFocus(this.searchBox);
-        refreshthr.start();
-
+        thread = new Thread(() -> {
+            try {
+                this.modList.children().addAll(cf.getMods("1.18.2", searchBox.getValue(), index, 1));
+                index++;
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        });
+        loadMore();
     }
 
     public boolean keyPressed(int p_101347_, int p_101348_, int p_101349_) {
@@ -113,7 +133,6 @@ public class BrowseScreen extends Screen {
 
     @Override
     public void onClose() {
-        refreshthr.stop();
         this.minecraft.setScreen(lastScreen);
     }
 

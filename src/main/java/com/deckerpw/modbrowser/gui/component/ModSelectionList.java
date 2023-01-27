@@ -2,11 +2,19 @@ package com.deckerpw.modbrowser.gui.component;
 
 import com.deckerpw.modbrowser.Curseforge;
 import com.deckerpw.modbrowser.Mod;
+import com.deckerpw.modbrowser.ModBrowser;
 import com.deckerpw.modbrowser.gui.BrowseScreen;
+import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileReader;
 import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -18,6 +26,8 @@ import net.minecraft.client.gui.GuiComponent;
 import net.minecraft.client.gui.components.MultiLineLabel;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.client.renderer.texture.DynamicTexture;
+import net.minecraft.client.renderer.texture.TextureManager;
 import net.minecraft.locale.Language;
 import net.minecraft.network.chat.*;
 import net.minecraft.resources.ResourceLocation;
@@ -29,11 +39,11 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 @OnlyIn(Dist.CLIENT)
 public class ModSelectionList extends ObjectSelectionList<ModSelectionList.ModListEntry> {
     static final ResourceLocation ICON_OVERLAY_LOCATION = new ResourceLocation("textures/gui/world_selection.png");
-    private final Screen screen;
+    private final BrowseScreen screen;
     protected int itemHeight  = 36;
     private  int selected = Integer.MAX_VALUE;
 
-    public ModSelectionList(Screen p_101658_, Minecraft p_101659_, int p_101660_, int p_101661_, int p_101662_, int p_101663_, int p_101664_) {
+    public ModSelectionList(BrowseScreen p_101658_, Minecraft p_101659_, int p_101660_, int p_101661_, int p_101662_, int p_101663_, int p_101664_) {
         super(p_101659_, p_101660_, p_101661_, p_101662_, p_101663_, p_101664_);
         this.screen = p_101658_;
     }
@@ -149,7 +159,9 @@ public class ModSelectionList extends ObjectSelectionList<ModSelectionList.ModLi
         private final MultiLineLabel summaryDisplayCache;
         private final MultiLineLabel descriptionDisplayCache;
         private long lastClickTime;
+        private ResourceLocation logo;
         private final Curseforge cf;
+        private boolean last = true;
 
         public ModListEntry(Minecraft p_100084_, ModSelectionList p_100085_, Screen p_100086_, Mod p_100087_, Curseforge cf) {
             this.screen = p_100086_;
@@ -160,6 +172,16 @@ public class ModSelectionList extends ObjectSelectionList<ModSelectionList.ModLi
             this.nameDisplayCache = cacheName(p_100084_, p_100087_.getTitle());
             this.summaryDisplayCache = cacheSummary(minecraft,mod);
             this.descriptionDisplayCache = cacheDescription(minecraft,mod.getDescription());
+            logo = BrowseScreen.DEFAULT_ICON;
+            if (mod.id != ModBrowser.GHOST_ID) {
+                //TODO add setting
+                try {
+                    generateLogoRessource();
+                } catch (IOException e){
+                    e.printStackTrace();
+                }
+            }
+
         }
         private static FormattedCharSequence cacheName(Minecraft p_100105_, Component p_100106_) {
             int i = p_100105_.font.width(p_100106_);
@@ -204,10 +226,18 @@ public class ModSelectionList extends ObjectSelectionList<ModSelectionList.ModLi
             return new TranslatableComponent("narrator.select", mod.getTitle());
         }
 
+        private void generateLogoRessource() throws IOException {
+            HttpURLConnection con = (HttpURLConnection) new URL(mod.logoURL).openConnection();
+            TextureManager manager = minecraft.getTextureManager();
+            logo = manager.register(mod.id+"_logo",new DynamicTexture(NativeImage.read(con.getInputStream())));
+        }
+
         public void render(PoseStack p_101721_, int p_101722_, int p_101723_, int p_101724_, int p_101725_, int p_101726_, int p_101727_, int p_101728_, boolean p_101729_, float p_101730_) {
+
             RenderSystem.setShader(GameRenderer::getPositionTexShader);
             RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-            RenderSystem.setShaderTexture(0, BrowseScreen.DEFAULT_ICON);
+            RenderSystem.setShaderTexture(0, logo);
+
             RenderSystem.enableBlend();
             GuiComponent.blit(p_101721_, p_101724_, p_101723_, 0.0F, 0.0F, 32, 32, 32, 32);
             RenderSystem.disableBlend();
@@ -227,6 +257,10 @@ public class ModSelectionList extends ObjectSelectionList<ModSelectionList.ModLi
 
             if (parent.getSelected() != null && parent.getSelected().equals(this))
                 descriptionDisplayCache.renderLeftAligned(p_101721_, p_101724_ + 2, p_101723_ + 32 + 2 , 10, 16777215);
+            if (last){
+                parent.screen.loadMore();
+                last = false;
+            }
         }
 
         public boolean mouseClicked(double p_101706_, double p_101707_, int p_101708_) {

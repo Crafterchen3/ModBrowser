@@ -92,6 +92,7 @@ public class Curseforge {
         mod.authors = result;
         mod.category = getCategory(obj);
         mod.description = obj.getString("summary");
+        mod.logoURL = obj.getJSONObject("logo").getString("url");
         return new ModSelectionList.ModListEntry(this.mc,this.modSelectionList,this.screen,mod, this);
     }
 
@@ -137,7 +138,7 @@ public class Curseforge {
         if (mods.size() == 0){
             Mod mod = new Mod();
             mod.category = "Unfortunately no Mod has been found";
-            mod.id = -54; //a special code so you won't be able to download
+            mod.id = GHOST_ID; //a special code so you won't be able to download
             mod.authors = "):";
             mod.title = "Sorry";
             mods.add(new ModSelectionList.ModListEntry(mc,modSelectionList,screen,mod, this));

@@ -12,8 +12,9 @@ public class Mod implements PackSelectionModel.Entry {
     public int id;
     public String title;
     public String description;
+    public boolean last = true;
 
-
+    public String logoURL;
 
     public String category;
     public String authors;
@@ -30,7 +31,9 @@ public class Mod implements PackSelectionModel.Entry {
     public PackCompatibility getCompatibility() {
         return PackCompatibility.COMPATIBLE;
     }
-
+    public String getLogoURL() {
+        return logoURL;
+    }
     @Override
     public Component getTitle() {
         return Component.nullToEmpty(title);
