@@ -1,6 +1,7 @@
 package com.deckerpw.modbrowser;
 
 import com.deckerpw.modbrowser.gui.ModBrowserMainMenuScreen;
+import com.deckerpw.modbrowser.gui.component.ModSelectionList;
 import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.TitleScreen;

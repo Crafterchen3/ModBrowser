@@ -68,11 +68,14 @@ public class Curseforge {
     }
 
     public void downloadModAndDependencies(int id) throws IOException {
-        ArrayList<File> downloads = getDependencies(id);
-        downloads.add( getModFile(id));
-        for (File file : downloads) {
-            downloadFile(file);
+        if (id != GHOST_ID){
+            ArrayList<File> downloads = getDependencies(id);
+            downloads.add( getModFile(id));
+            for (File file : downloads) {
+                downloadFile(file);
+            }
         }
+
     }
 
     private ModSelectionList.ModListEntry jsonToMod(JSONObject obj) throws IOException {
@@ -137,10 +140,12 @@ public class Curseforge {
         }
         if (mods.size() == 0){
             Mod mod = new Mod();
-            mod.category = "Unfortunately no Mod has been found";
+            mod.category = "The End";
             mod.id = GHOST_ID; //a special code so you won't be able to download
-            mod.authors = "):";
-            mod.title = "Sorry";
+            mod.authors = "no-one";
+            mod.title = "The End of the list";
+            mod.description = "Curseforge couldn't find any mods for this search";
+
             mods.add(new ModSelectionList.ModListEntry(mc,modSelectionList,screen,mod, this));
         }
 

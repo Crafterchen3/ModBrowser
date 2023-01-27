@@ -2,52 +2,29 @@ package com.deckerpw.modbrowser.gui;
 
 import com.deckerpw.modbrowser.Curseforge;
 import com.deckerpw.modbrowser.Mod;
+import com.deckerpw.modbrowser.ModBrowser;
 import com.deckerpw.modbrowser.gui.component.ModSelectionList;
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.Tesselator;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.narration.NarrationElementOutput;
-import net.minecraft.client.gui.screens.PauseScreen;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.gui.screens.packs.PackSelectionModel;
-import net.minecraft.client.gui.screens.packs.PackSelectionScreen;
-import net.minecraft.client.gui.screens.packs.TransferableSelectionList;
-import net.minecraft.client.gui.screens.worldselection.SelectWorldScreen;
-import net.minecraft.client.renderer.GameRenderer;
-import net.minecraft.locale.Language;
 import net.minecraft.network.chat.CommonComponents;
-import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.Style;
 import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.packs.repository.Pack;
-import net.minecraft.util.FormattedCharSequence;
-import net.minecraftforge.client.gui.GuiUtils;
-import net.minecraftforge.client.gui.ModListScreen;
-import net.minecraftforge.client.gui.ScrollPanel;
-import net.minecraftforge.common.ForgeHooks;
-import net.minecraftforge.common.util.Size2i;
-import net.minecraftforge.jarjar.nio.pathfs.PathPath;
 
 import java.io.IOException;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.StringTokenizer;
-import java.util.stream.Stream;
 
 public class BrowseScreen extends Screen {
 
     public static final ResourceLocation DEFAULT_ICON = new ResourceLocation("textures/misc/unknown_pack.png");
+    public static final ResourceLocation LOADING_ICON = new ResourceLocation(ModBrowser.MOD_ID,"textures/gui/loading.png");
     private Screen lastScreen;
     private Curseforge cf;
     private Thread thread;
     private EditBox searchBox;
+    private ModSelectionList.ModListEntry loadingEntry;
     private ModSelectionList modList;
+    private boolean full = false;
     private int index = 0;
 
     public BrowseScreen(Screen lastScreen) {
@@ -58,12 +35,20 @@ public class BrowseScreen extends Screen {
     public void loadMore(){
         thread.stop();
         thread = new Thread(() -> {
-            try {
-                this.modList.children().addAll(cf.getMods("1.18.2", searchBox.getValue(), index, 1));
-                index++;
-            } catch (IOException e) {
-                throw new RuntimeException(e);
+            if (!full){
+                this.modList.children().add(loadingEntry);
+                try {
+                    ModSelectionList.ModListEntry entry = cf.getMods("1.18.2", searchBox.getValue(), index, 1).get(0);
+                    if (entry.mod.id == ModBrowser.GHOST_ID) {
+                        full = true;
+                    }
+                    this.modList.children().set(this.modList.children().size()-1,entry);
+                    index++;
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
             }
+
         });
         thread.start();
     }
@@ -71,13 +56,24 @@ public class BrowseScreen extends Screen {
     private void refresh(){
         thread.stop();
         index = 0;
-        modList.children().clear();thread = new Thread(() -> {
-            try {
-                this.modList.children().addAll(cf.getMods("1.18.2", searchBox.getValue(), index, 1));
-                index++;
-            } catch (IOException e) {
-                throw new RuntimeException(e);
+        modList.children().clear();
+        full = false;
+        this.modList.reset();
+        thread = new Thread(() -> {
+            if (!full){
+                this.modList.children().add(loadingEntry);
+                try {
+                    ModSelectionList.ModListEntry entry = cf.getMods("1.18.2", searchBox.getValue(), index, 1).get(0);
+                    if (entry.mod.id == ModBrowser.GHOST_ID) {
+                        full = true;
+                    }
+                    this.modList.children().set(this.modList.children().size()-1,entry);
+                    index++;
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
             }
+
         });
         thread.start();
     }
@@ -111,6 +107,13 @@ public class BrowseScreen extends Screen {
                 throw new RuntimeException(e);
             }
         });
+        Mod loadingMod = new Mod();
+        loadingMod.title = "Loading...";
+        loadingMod.authors = "no-one";
+        loadingMod.id = ModBrowser.GHOST_ID;
+        loadingMod.description = "";
+        loadingMod.category = "";
+        this.loadingEntry = new ModSelectionList.ModListEntry(minecraft,modList,this,loadingMod,cf,false);
         loadMore();
     }
 

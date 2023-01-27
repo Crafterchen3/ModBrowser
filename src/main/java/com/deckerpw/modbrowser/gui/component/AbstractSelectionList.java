@@ -76,6 +76,11 @@ public abstract class AbstractSelectionList<E extends AbstractSelectionList.Entr
 
     }
 
+    public void reset(){
+        this.scrollAmount = 0;
+        this.selected = null;
+    }
+
     public int getRowWidth() {
         return 220;
     }

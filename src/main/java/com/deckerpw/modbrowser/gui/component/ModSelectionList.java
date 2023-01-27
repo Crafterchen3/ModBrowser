@@ -48,6 +48,11 @@ public class ModSelectionList extends ObjectSelectionList<ModSelectionList.ModLi
         this.screen = p_101658_;
     }
 
+    @Override
+    public void reset() {
+        super.reset();
+        this.selected = Integer.MAX_VALUE;
+    }
 
     protected int getScrollbarPosition() {
         return super.getScrollbarPosition() + 20;
@@ -153,7 +158,7 @@ public class ModSelectionList extends ObjectSelectionList<ModSelectionList.ModLi
         private static final int ICON_OVERLAY_Y_SELECTED = 32;
         private final ModSelectionList parent;
         private final Minecraft minecraft;
-        private final Mod mod;
+        public final Mod mod;
         private final Screen screen;
         private final FormattedCharSequence nameDisplayCache;
         private final MultiLineLabel summaryDisplayCache;
@@ -182,6 +187,20 @@ public class ModSelectionList extends ObjectSelectionList<ModSelectionList.ModLi
                 }
             }
 
+        }
+
+        public ModListEntry(Minecraft p_100084_, ModSelectionList p_100085_, Screen p_100086_, Mod p_100087_, Curseforge cf,boolean dont) {
+            this.screen = p_100086_;
+            this.mod = p_100087_;
+            this.minecraft = p_100084_;
+            this.parent = p_100085_;
+            this.cf = cf;
+            this.nameDisplayCache = cacheName(p_100084_, p_100087_.getTitle());
+            this.summaryDisplayCache = cacheSummary(minecraft,mod);
+            this.descriptionDisplayCache = cacheDescription(minecraft,mod.getDescription());
+            logo = BrowseScreen.LOADING_ICON;
+
+            this.last = dont;
         }
         private static FormattedCharSequence cacheName(Minecraft p_100105_, Component p_100106_) {
             int i = p_100105_.font.width(p_100106_);
