@@ -27,6 +27,7 @@ import java.util.stream.Collectors;
 public class ModBrowser {
 
     public final static String MOD_ID = "modbrowser";
+    public final static String MC_VERSION = "1.18.2";
     public final static int GHOST_ID = -54;
     public static String MODPATH;
 

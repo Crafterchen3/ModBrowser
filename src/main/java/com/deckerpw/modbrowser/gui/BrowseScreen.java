@@ -1,6 +1,7 @@
 package com.deckerpw.modbrowser.gui;
 
 import com.deckerpw.modbrowser.Curseforge;
+import com.deckerpw.modbrowser.File;
 import com.deckerpw.modbrowser.Mod;
 import com.deckerpw.modbrowser.ModBrowser;
 import com.deckerpw.modbrowser.gui.component.ModSelectionList;
@@ -9,10 +10,12 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.CommonComponents;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.resources.ResourceLocation;
 
 import java.io.IOException;
+import java.util.ArrayList;
 
 public class BrowseScreen extends Screen {
 
@@ -25,11 +28,24 @@ public class BrowseScreen extends Screen {
     private ModSelectionList.ModListEntry loadingEntry;
     private ModSelectionList modList;
     private boolean full = false;
+    private Button exitButton;
+
+    private ArrayList<File> downloadList = new ArrayList<>();
     private int index = 0;
 
     public BrowseScreen(Screen lastScreen) {
         super(new TranslatableComponent("browse.name"));
         this.lastScreen = lastScreen;
+    }
+
+    public void SelectMod(int id){
+        try {
+            downloadList.add(cf.getModFile(id));
+            downloadList.addAll(cf.getDependencies(id));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        exitButton.setMessage(Component.nullToEmpty(CommonComponents.GUI_DONE.getString()+ " (Download "+downloadList.size()+" mods)"));
     }
 
     public void loadMore(){
@@ -38,11 +54,12 @@ public class BrowseScreen extends Screen {
             if (!full){
                 this.modList.children().add(loadingEntry);
                 try {
-                    ModSelectionList.ModListEntry entry = cf.getMods("1.18.2", searchBox.getValue(), index, 1).get(0);
+                    ModSelectionList.ModListEntry entry = cf.getMods(searchBox.getValue(), index, 1).get(0);
                     if (entry.mod.id == ModBrowser.GHOST_ID) {
                         full = true;
+                    } else if (full != true || this.modList.children().size() == 1) {
+                        this.modList.children().set(this.modList.children().size()-1,entry);
                     }
-                    this.modList.children().set(this.modList.children().size()-1,entry);
                     index++;
                 } catch (IOException e) {
                     throw new RuntimeException(e);
@@ -63,11 +80,12 @@ public class BrowseScreen extends Screen {
             if (!full){
                 this.modList.children().add(loadingEntry);
                 try {
-                    ModSelectionList.ModListEntry entry = cf.getMods("1.18.2", searchBox.getValue(), index, 1).get(0);
+                    ModSelectionList.ModListEntry entry = cf.getMods(searchBox.getValue(), index, 1).get(0);
                     if (entry.mod.id == ModBrowser.GHOST_ID) {
                         full = true;
+                    } else if (full != true || this.modList.children().size() == 1) {
+                        this.modList.children().set(this.modList.children().size()-1,entry);
                     }
-                    this.modList.children().set(this.modList.children().size()-1,entry);
                     index++;
                 } catch (IOException e) {
                     throw new RuntimeException(e);
@@ -94,26 +112,35 @@ public class BrowseScreen extends Screen {
 
         this.addWidget(this.searchBox);
 
-        this.addRenderableWidget(new Button(this.width / 2 - 100, this.height - 28, 200, 20, CommonComponents.GUI_DONE, (p_96257_) -> {
-            this.minecraft.setScreen(this.lastScreen);
-        }));
-
-        this.setInitialFocus(this.searchBox);
-        thread = new Thread(() -> {
-            try {
-                this.modList.children().addAll(cf.getMods("1.18.2", searchBox.getValue(), index, 1));
-                index++;
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
+        exitButton =  new Button(this.width / 2 - 100, this.height - 28, 200, 20, CommonComponents.GUI_DONE, (p_96257_) -> {
+            onClose();
         });
+        this.addRenderableWidget(exitButton);
+        thread = new Thread(() -> {
+            if (!full){
+                this.modList.children().add(loadingEntry);
+                try {
+                    ModSelectionList.ModListEntry entry = cf.getMods(searchBox.getValue(), index, 1).get(0);
+                    if (entry.mod.id == ModBrowser.GHOST_ID) {
+                        full = true;
+                    } else if (full != true || this.modList.children().size() == 1) {
+                        this.modList.children().set(this.modList.children().size()-1,entry);
+                    }else this.modList.children().remove(this.modList.children().size()-1);
+                    index++;
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+
+        });
+        this.setInitialFocus(this.searchBox);
         Mod loadingMod = new Mod();
         loadingMod.title = "Loading...";
         loadingMod.authors = "no-one";
         loadingMod.id = ModBrowser.GHOST_ID;
         loadingMod.description = "";
         loadingMod.category = "";
-        this.loadingEntry = new ModSelectionList.ModListEntry(minecraft,modList,this,loadingMod,cf,false);
+        this.loadingEntry = new ModSelectionList.ModListEntry(minecraft,modList,this,loadingMod, false);
         loadMore();
     }
 
@@ -136,7 +163,10 @@ public class BrowseScreen extends Screen {
 
     @Override
     public void onClose() {
-        this.minecraft.setScreen(lastScreen);
+        if (downloadList.size() > 0)
+            minecraft.setScreen(new DownloadScreen(downloadList,lastScreen,cf));
+        else
+            minecraft.setScreen(lastScreen);
     }
 
 

@@ -1,4 +1,7 @@
 {
   "browse.name" : "Browse",
-  "browse.search" : "search for mods "
+  "browse.search" : "search for mods ",
+  "download.name" : "Downloading",
+  "download.init" : "Initiating",
+  "download.instr" : "Downloading %s"
 }

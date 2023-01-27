@@ -1,6 +1,5 @@
 package com.deckerpw.modbrowser.gui.component;
 
-import com.deckerpw.modbrowser.Curseforge;
 import com.deckerpw.modbrowser.Mod;
 import com.deckerpw.modbrowser.ModBrowser;
 import com.deckerpw.modbrowser.gui.BrowseScreen;
@@ -8,12 +7,8 @@ import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileReader;
 import java.io.IOException;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
@@ -165,15 +160,13 @@ public class ModSelectionList extends ObjectSelectionList<ModSelectionList.ModLi
         private final MultiLineLabel descriptionDisplayCache;
         private long lastClickTime;
         private ResourceLocation logo;
-        private final Curseforge cf;
         private boolean last = true;
 
-        public ModListEntry(Minecraft p_100084_, ModSelectionList p_100085_, Screen p_100086_, Mod p_100087_, Curseforge cf) {
+        public ModListEntry(Minecraft p_100084_, ModSelectionList p_100085_, Screen p_100086_, Mod p_100087_) {
             this.screen = p_100086_;
             this.mod = p_100087_;
             this.minecraft = p_100084_;
             this.parent = p_100085_;
-            this.cf = cf;
             this.nameDisplayCache = cacheName(p_100084_, p_100087_.getTitle());
             this.summaryDisplayCache = cacheSummary(minecraft,mod);
             this.descriptionDisplayCache = cacheDescription(minecraft,mod.getDescription());
@@ -189,12 +182,11 @@ public class ModSelectionList extends ObjectSelectionList<ModSelectionList.ModLi
 
         }
 
-        public ModListEntry(Minecraft p_100084_, ModSelectionList p_100085_, Screen p_100086_, Mod p_100087_, Curseforge cf,boolean dont) {
+        public ModListEntry(Minecraft p_100084_, ModSelectionList p_100085_, Screen p_100086_, Mod p_100087_, boolean dont) {
             this.screen = p_100086_;
             this.mod = p_100087_;
             this.minecraft = p_100084_;
             this.parent = p_100085_;
-            this.cf = cf;
             this.nameDisplayCache = cacheName(p_100084_, p_100087_.getTitle());
             this.summaryDisplayCache = cacheSummary(minecraft,mod);
             this.descriptionDisplayCache = cacheDescription(minecraft,mod.getDescription());
@@ -285,11 +277,7 @@ public class ModSelectionList extends ObjectSelectionList<ModSelectionList.ModLi
         public boolean mouseClicked(double p_101706_, double p_101707_, int p_101708_) {
             parent.setSelected(this);
             if (p_101706_ - (double) parent.getRowLeft() <= 32.0D) {
-                try {
-                    cf.downloadModAndDependencies(mod.id);
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
+                parent.screen.SelectMod(mod.id);
                 return true;
             }
             return false;
