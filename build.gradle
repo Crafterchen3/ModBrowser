@@ -126,6 +126,7 @@ repositories {
     dependencies {
 
         implementation group: 'org.json', name: 'json', version: '20220924'
+
     }
     // If you have mod jar dependencies in ./libs, you can declare them as a repository like so:
     // flatDir {
@@ -140,6 +141,7 @@ dependencies {
 
     implementation group: 'org.json', name: 'json', version: '20220924'
     minecraft 'net.minecraftforge:forge:1.18.2-40.2.0'
+
 
     // Real mod deobf dependency examples - these get remapped to your current mappings
     // compileOnly fg.deobf("mezz.jei:jei-${mc_version}:${jei_version}:api") // Adds JEI API as a compile dependency
@@ -162,7 +164,7 @@ jar {
                 "Specification-Vendor"    : "Crafterchen3",
                 "Specification-Version"   : "1", // We are version 1 of ourselves
                 "Implementation-Title"    : project.name,
-                "Implementation-Version"  : project.jar.archiveVersion,
+                "Implementation-Version"  : "2.0",
                 "Implementation-Vendor"   : "Crafterchen3",
                 "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
         ])

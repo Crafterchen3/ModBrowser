@@ -1,20 +1,27 @@
 package com.deckerpw.modbrowser;
 
 import com.deckerpw.modbrowser.gui.BrowseScreen;
+import com.mojang.blaze3d.platform.NativeImage;
 import net.minecraft.client.gui.screens.packs.PackSelectionModel;
+import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.repository.PackCompatibility;
 import net.minecraft.server.packs.repository.PackSource;
 
+import java.io.InputStream;
+
 public class Mod implements PackSelectionModel.Entry {
 
-    public int id;
+    public String id;
+    public boolean distribute = true;
     public String title;
     public String description;
     public boolean last = true;
+    public ModBrowser.ModType modType;
+    public DynamicTexture logoURL;
 
-    public String logoURL;
+    public ResourceLocation logo;
 
     public String category;
     public String authors;
@@ -31,7 +38,7 @@ public class Mod implements PackSelectionModel.Entry {
     public PackCompatibility getCompatibility() {
         return PackCompatibility.COMPATIBLE;
     }
-    public String getLogoURL() {
+    public DynamicTexture getLogoURL() {
         return logoURL;
     }
     @Override

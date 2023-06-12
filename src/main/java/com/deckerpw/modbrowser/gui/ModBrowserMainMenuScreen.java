@@ -20,7 +20,7 @@ public class ModBrowserMainMenuScreen extends TitleScreen {
     protected void init() {
         super.init();
         int l = this.height / 4 + 48;
-        this.addRenderableWidget(new ImageButton(this.width / 2 - 100, l + 24 * 2, 20, 20, 0, 106, 20, new ResourceLocation(ModBrowser.MOD_ID,"textures/gui/widgets.png"), 256, 256, (p_96791_) -> {
+        this.addRenderableWidget(new ImageButton(this.width / 2 - 100, l + 24 * 2, 20, 20, 0, 32, 20, new ResourceLocation(ModBrowser.MOD_ID,"textures/gui/widgets.png"), 256, 256, (p_96791_) -> {
             this.minecraft.setScreen(new BrowseScreen(this));
         }));
         for (int i = 0; i < this.renderables.size(); i++) {

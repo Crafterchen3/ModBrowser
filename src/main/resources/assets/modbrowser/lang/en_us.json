@@ -1,7 +1,20 @@
 {
   "browse.name" : "Browse",
   "browse.search" : "search for mods ",
+  "confirm.name" : "Confirm Download",
+  "confirm.total.files" : "Total Files: %s",
+  "confirm.total.size" : "Total Size: ~%smb",
+  "confirm.button.cancel" : "Cancel",
+  "confirm.button.exit" : "Exit to Main Menu",
+  "confirm.button.continue" : "Continue",
   "download.name" : "Downloading",
   "download.init" : "Initiating",
-  "download.instr" : "Downloading %s"
+  "download.total" : "Total progress: %s/%s",
+  "download.instr" : "Downloading %s",
+  "downloads.name" : "Download List",
+  "entry.author.instr" : "by:%s",
+  "collections.name" : "Collections",
+  "types.mods" : "Mods",
+  "types.resource_packs" : "Resource Packs",
+  "types.list": "Download List"
 }
