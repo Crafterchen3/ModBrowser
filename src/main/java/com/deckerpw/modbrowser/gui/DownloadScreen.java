@@ -2,10 +2,14 @@ package com.deckerpw.modbrowser.gui;
 
 import com.deckerpw.modbrowser.File;
 import com.deckerpw.modbrowser.IModProvider;
+import com.deckerpw.modbrowser.ModBrowser;
+import com.deckerpw.modbrowser.ModIndex;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.gui.screens.ProgressScreen;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.gui.screens.worldselection.OptimizeWorldScreen;
+import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.world.level.material.MaterialColor;
 import net.minecraftforge.client.event.RenderTooltipEvent;
@@ -19,6 +23,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Objects;
 
 public class DownloadScreen extends Screen {
 
@@ -45,6 +50,13 @@ public class DownloadScreen extends Screen {
                  downloads) {
                 currentMod = file.mod.mod.title;
                 currentProgress = 0;
+                if (ModBrowser.index.isModInstalled(file.mod.mod.id)){
+                    ModIndex.FileIndex index = ModBrowser.index.getIndex(file.mod.mod.id);
+                    file.index = index;
+                    java.io.File temp = Paths.get(minecraft.gameDirectory.getPath() + file.index.prefix, file.index.fileName).toFile();
+                    if (temp.exists())
+                        temp.deleteOnExit();
+                }
                 try {
                     URL url = new URL(file.downloadUrl);
                     HttpURLConnection httpConnection = (HttpURLConnection) (url.openConnection());
@@ -65,6 +77,11 @@ public class DownloadScreen extends Screen {
                     }
                     bout.close();
                     in.close();
+                    if (file.index == null)
+                        file.index = new ModIndex.FileIndex(file.mod.mod.id,file.fileName,file.mod.mod.modType.prefix);
+                    else
+                        file.index.fileName = file.fileName;
+                    ModBrowser.index.setModIndex(file.index);
                 }catch (Exception e){
                     e.printStackTrace();
                 }

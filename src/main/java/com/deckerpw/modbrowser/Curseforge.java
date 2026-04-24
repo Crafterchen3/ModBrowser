@@ -19,9 +19,14 @@ public class Curseforge implements IModProvider{
 
     private String base_url = "https://api.curseforge.com/v1/mods/";
     private String gameMeta = "?gameId=432&modLoaderType=1";
+    private ArrayList<File> temp = new ArrayList<>();
     private Minecraft mc;
     private ObjectSelectionList<Entrys.BrowseListEntry> modSelectionList;
     private BrowseScreen screen;
+
+    public Curseforge(Minecraft mc) {
+        this.mc = mc;
+    }
 
 
     public Curseforge(Minecraft mc, ObjectSelectionList<Entrys.BrowseListEntry> modSelectionList, BrowseScreen screen) {
@@ -48,18 +53,56 @@ public class Curseforge implements IModProvider{
         return response.toString();
     }
 
-    public ArrayList<File> getModFiles(String identifier) throws IOException {
+    public boolean existsMod(int id){
+        for (File file :
+                temp) {
+            if (Objects.equals(file.mod.mod.id, id)) return true;
+        }
+        return false;
+    }
+
+    public ArrayList<File> getModFiles(Mod mod) throws IOException {
+        int identifier = mod.id;
+        temp = new ArrayList<>();
         JSONObject file = getModFilesJSON(identifier);
         ArrayList<File> files = new ArrayList<File>();
-        files.add(getModFile(identifier));
+        File modFile = getModFile(identifier);
+        files.add(modFile);
+        temp.add(modFile);
         if (file.has("dependencies")) {
             JSONArray dependenciesJSON = file.getJSONArray("dependencies");
             for (int i = 0; i < dependenciesJSON.length(); i++) {
                 JSONObject dependency = dependenciesJSON.getJSONObject(i);
-                if (dependency.getInt("relationType") == 3 && !screen.existsMod(""+dependency.getInt("modId"))) {
+                if (dependency.getInt("relationType") == 3 && !screen.existsMod(dependency.getInt("modId")) && !existsMod(dependency.getInt("modId"))) {
+                    File modFile1 = getModFile(dependency.getInt("modId"));
+                    temp.add(modFile1);
+                    files.add(modFile1);
+                    ArrayList<File> modId = getModFilesInternal(dependency.getInt("modId"));
+                    temp.addAll(modId);
+                    files.addAll(modId);
+                }
+            }
+        }
+        return files;
+    }
 
-                    files.add(getModFile(""+dependency.getInt("modId")));
-                    files.addAll(getModFiles(""+dependency.getInt("modId")));
+    public ArrayList<File> getModFilesInternal(int identifier) throws IOException {
+        JSONObject file = getModFilesJSON(identifier);
+        ArrayList<File> files = new ArrayList<File>();
+        File modFile = getModFile(identifier);
+        files.add(modFile);
+        temp.add(modFile);
+        if (file.has("dependencies")) {
+            JSONArray dependenciesJSON = file.getJSONArray("dependencies");
+            for (int i = 0; i < dependenciesJSON.length(); i++) {
+                JSONObject dependency = dependenciesJSON.getJSONObject(i);
+                if (dependency.getInt("relationType") == 3 && !screen.existsMod(dependency.getInt("modId")) && !existsMod(dependency.getInt("modId"))) {
+                    File modFile1 = getModFile(dependency.getInt("modId"));
+                    temp.add(modFile1);
+                    files.add(modFile1);
+                    ArrayList<File> modId = getModFilesInternal(dependency.getInt("modId"));
+                    temp.addAll(modId);
+                    files.addAll(modId);
                 }
             }
         }
@@ -68,7 +111,7 @@ public class Curseforge implements IModProvider{
 
     private Entrys.BrowseListEntry jsonToMod(JSONObject obj, ModType currentModType) throws IOException {
         Mod mod = new Mod();
-        mod.id = Integer.toString(obj.getInt("id"));
+        mod.id = obj.getInt("id");
         mod.title = obj.optString("name");
         JSONArray arr = obj.getJSONArray("authors");
         String result = "";
@@ -90,10 +133,25 @@ public class Curseforge implements IModProvider{
         return new Entrys.BrowseListEntry(this.mc, this.modSelectionList,this.screen, mod);
     }
 
-    private File jsonToFile(JSONObject obj, String modId, ModType currentModType) throws IOException {
+    private File jsonToFile(JSONObject obj, int modId, ModType currentModType) throws IOException {
         File file = new File();
         file.id = obj.getInt("id");
         file.mod = getMod(modId, currentModType);
+        file.fileName = obj.getString("fileName");
+        file.downloadUrl = obj.getString("downloadUrl");
+        file.fileSize = obj.getInt("fileLength")/Math.pow(2,20);
+        ArrayList<String> gameVersions = new ArrayList<>();
+        JSONArray arr = obj.getJSONArray("gameVersions");
+        for (int i = 0; i < arr.length(); i++) {
+            gameVersions.add(arr.getString(i));
+        }
+        file.gameVersions = gameVersions;
+        return file;
+    }
+
+    private File jsonToFileNoScreen(JSONObject obj, int modId, ModType currentModType) throws IOException {
+        File file = new File();
+        file.id = obj.getInt("id");
         file.fileName = obj.getString("fileName");
         file.downloadUrl = obj.getString("downloadUrl");
         file.fileSize = obj.getInt("fileLength")/Math.pow(2,20);
@@ -144,20 +202,27 @@ public class Curseforge implements IModProvider{
         return mods;
     }
 
-    public File getModFile(String identifier) throws IOException {
+    public File getModFile(int identifier) throws IOException {
         return getModFile(identifier, screen.getCurrentModType());
     }
 
-    public File getModFile(String identifier, ModType currentModType) throws IOException {
+    public File getModFile(int identifier, ModType currentModType) throws IOException {
         String searchURL = base_url + identifier + "/files?gameVersion=" + MC_VERSION + "&modLoaderType=1";
         //System.out.println(searchURL);
         String result = readURL(new URL(searchURL));
         JSONArray files = new JSONObject(result).getJSONArray("data");
         return jsonToFile(files.getJSONObject(0), identifier, currentModType);
-
     }
 
-    private JSONObject getModFilesJSON(String identifier) throws IOException {
+    public File getModFileNoScreen(int identifier, ModType currentModType) throws IOException {
+        String searchURL = base_url + identifier + "/files?gameVersion=" + MC_VERSION + "&modLoaderType=1";
+        //System.out.println(searchURL);
+        String result = readURL(new URL(searchURL));
+        JSONArray files = new JSONObject(result).getJSONArray("data");
+        return jsonToFileNoScreen(files.getJSONObject(0), identifier, currentModType);
+    }
+
+    private JSONObject getModFilesJSON(int identifier) throws IOException {
         JSONObject jsonObject = null;
         String searchURL = base_url + identifier + "/files?gameVersion=" + MC_VERSION + "&modLoaderType=1";
         //System.out.println(searchURL);
@@ -168,19 +233,13 @@ public class Curseforge implements IModProvider{
         return files.getJSONObject(0);
     }
 
-    public Entrys.BrowseListEntry getMod(String identifier, ModType currentModType) throws IOException {
+    public Entrys.BrowseListEntry getMod(int identifier, ModType currentModType) throws IOException {
         String searchURL = base_url + identifier;
         //System.out.println(searchURL);
         String result = readURL(new URL(searchURL));
         JSONObject obj = new JSONObject(result).getJSONObject("data");
         Entrys.BrowseListEntry mod = jsonToMod(obj, currentModType);
         return mod;
-    }
-
-
-    private JSONObject parse(String str) {
-        JSONObject obj = new JSONObject(str);
-        return obj;
     }
 
 

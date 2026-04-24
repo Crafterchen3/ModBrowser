@@ -115,7 +115,7 @@ public class Entrys {
             return new TranslatableComponent("narrator.select", mod.getTitle());
         }
 
-        private void generateLogoRessource() throws IOException {
+        private void generateLogoresource() throws IOException {
 
             TextureManager manager = minecraft.getTextureManager();
             if (mod.logo != null){
@@ -129,12 +129,16 @@ public class Entrys {
         public void render(PoseStack p_101721_, int p_101722_, int p_101723_, int p_101724_, int p_101725_, int p_101726_, int p_101727_, int p_101728_, boolean p_101729_, float p_101730_) {
             if (mod.modType == ModBrowser.ModType.FILES)
                 this.overlayX = 32F;
+            else if (screen.existsMod(mod.id))
+                this.overlayX = 32F;
+            else if (ModBrowser.index.isModInstalled(mod.id))
+                this.overlayX = 64F;
             RenderSystem.setShader(GameRenderer::getPositionTexShader);
             RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
             if (mod.id != ModBrowser.GHOST_ID && logo == BrowseScreen.LOADING_ICON) {
                 //TODO add setting
                 try {
-                    generateLogoRessource();
+                    generateLogoresource();
                 } catch (IOException e){
                     e.printStackTrace();
                 }
@@ -153,7 +157,21 @@ public class Entrys {
                 boolean flag = i < 32;
                 int j = flag ? 32 : 0;
                 GuiComponent.blit(p_101721_, p_101724_, p_101723_, overlayX, (float) j, 32, 32, 256*2, 256*2);
-
+                if (flag){
+                    Component tooltip;
+                    switch ((int) overlayX){
+                        default:
+                            tooltip = new TranslatableComponent("browse.tooltip.add");
+                            break;
+                        case 32:
+                            tooltip = new TranslatableComponent("browse.tooltip.remove");
+                            break;
+                        case 64:
+                            tooltip = new TranslatableComponent("browse.tooltip.update");
+                            break;
+                    }
+                    screen.renderTooltip(p_101721_,tooltip,p_101727_,p_101728_);
+                }
             }
             this.minecraft.font.drawShadow(p_101721_, nameDisplayCache, (float)(p_101724_ + 32 + 2), (float)(p_101723_ + 1), 16777215);
             summaryDisplayCache.renderLeftAligned(p_101721_, p_101724_ + 32 + 2, p_101723_ + 12, 10, 8421504);
@@ -176,6 +194,7 @@ public class Entrys {
             GuiComponent.blit(p_101721_, p_101724_, p_101723_, 0.0F, 0.0F, 32, 32, 32, 32);
             RenderSystem.disableBlend();
             if (this.minecraft.options.touchscreen || p_101729_) {
+
                 RenderSystem.setShaderTexture(0, new ResourceLocation(ModBrowser.MOD_ID,"textures/gui/widgets.png"));
                 GuiComponent.fill(p_101721_, p_101724_, p_101723_, p_101724_ + 32, p_101723_ + 32, -1601138544);
                 RenderSystem.setShader(GameRenderer::getPositionTexShader);
@@ -193,7 +212,7 @@ public class Entrys {
 
         public boolean mouseClicked(double p_101706_, double p_101707_, int p_101708_) {
             if (p_101706_ - (double) parent.getRowLeft() <= 32.0D) {
-                screen.selectMod(mod.id);
+                screen.selectMod(mod);
                 return true;
             }
             parent.setSelected(this);

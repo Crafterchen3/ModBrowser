@@ -32,7 +32,7 @@ public class DownloadsProvider implements IModProvider{
         try {
             Mod smod = screen.downloadList.get(page).mod.mod;
             Mod mod = new Mod();
-            mod.id = ""+page;
+            mod.id = page;
             mod.logo = smod.logo;
             mod.title = smod.title;
             mod.category = smod.category;
@@ -55,7 +55,12 @@ public class DownloadsProvider implements IModProvider{
     }
 
     @Override
-    public ArrayList<File> getModFiles(String identifier) throws IOException {
+    public ArrayList<File> getModFiles(Mod mod) throws IOException {
+        return null;
+    }
+
+    @Override
+    public File getModFile(int i) throws IOException {
         return null;
     }
 }

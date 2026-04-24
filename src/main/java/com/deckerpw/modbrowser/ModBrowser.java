@@ -1,6 +1,7 @@
 package com.deckerpw.modbrowser;
 
 import com.deckerpw.modbrowser.gui.ModBrowserMainMenuScreen;
+import com.deckerpw.modbrowser.gui.SetupScreen;
 import com.mojang.authlib.yggdrasil.YggdrasilAuthenticationService;
 import com.mojang.authlib.yggdrasil.YggdrasilEnvironment;
 import com.mojang.authlib.yggdrasil.YggdrasilMinecraftSessionService;
@@ -19,10 +20,15 @@ import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.minecraftforge.fml.event.lifecycle.FMLLoadCompleteEvent;
 import net.minecraftforge.fml.event.lifecycle.InterModEnqueueEvent;
 import net.minecraftforge.fml.event.lifecycle.InterModProcessEvent;
 import net.minecraftforge.event.server.ServerStartingEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+
+import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 // The value here should match an entry in the META-INF/mods.toml file
 @Mod(ModBrowser.MOD_ID)
@@ -30,7 +36,9 @@ public class ModBrowser {
 
     public final static String MOD_ID = "modbrowser";
     public final static String MC_VERSION = "1.18.2";
-    public final static String GHOST_ID = "-54";
+    public final static int GHOST_ID = -54;
+
+    public static ModIndex index;
 
     public ModBrowser() {
         // Register the setup method for modloading
@@ -39,6 +47,7 @@ public class ModBrowser {
         FMLJavaModLoadingContext.get().getModEventBus().addListener(this::enqueueIMC);
         // Register the processIMC method for modloading
         FMLJavaModLoadingContext.get().getModEventBus().addListener(this::processIMC);
+        FMLJavaModLoadingContext.get().getModEventBus().addListener(this::loadComplete);
 
         // Register ourselves for server and other game events we are interested in
         MinecraftForge.EVENT_BUS.register(this);
@@ -48,7 +57,19 @@ public class ModBrowser {
     private void setup(final FMLCommonSetupEvent event) {
         // Some preinit code
         System.out.println("USER: "+ Minecraft.getInstance().getUser().getSessionId());
+        Minecraft mc = Minecraft.getInstance();
+        try {
+            index = new ModIndex(Minecraft.getInstance());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+
     }
+
+    private void loadComplete(final FMLLoadCompleteEvent event)
+    {
+   }
 
     private void enqueueIMC(final InterModEnqueueEvent event) {
         // Some example code to dispatch IMC to another mod
@@ -90,20 +111,35 @@ public class ModBrowser {
     @SubscribeEvent
     public void onMainMenu(ScreenOpenEvent e) {
         if (e.getScreen() != null && e.getScreen().getClass() == TitleScreen.class) {
-            e.setScreen(new ModBrowserMainMenuScreen(true));
+            if (ModBrowserConfigs.FIRST_START.get())
+                e.setScreen(new SetupScreen(new TranslatableComponent("setup.name"),new ModBrowserMainMenuScreen(true)));
+            else{
+                if (ModBrowser.ModBrowserConfigs.AUTO_UPDATE_BEHAVIOR.get() != AutoUpdate.AutoUpdateBehavior.NO_AUTO_UPDATE) new AutoUpdate(Minecraft.getInstance()).updateMods();
+                e.setScreen(new ModBrowserMainMenuScreen(true));
+            }
+
         } else {
             e.setResult(Event.Result.ALLOW);
         }
     }
 
+
+
     public class ModBrowserConfigs {
         public static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
         public static final ForgeConfigSpec SPEC;
         public static final ForgeConfigSpec.ConfigValue<String> REFRESH_TOKEN;
+        public static final ForgeConfigSpec.ConfigValue<Boolean> SHOW_PROHIBITED_MODS;
+        public static final ForgeConfigSpec.ConfigValue<Boolean> FIRST_START;
+
+        public static final ForgeConfigSpec.ConfigValue<AutoUpdate.AutoUpdateBehavior> AUTO_UPDATE_BEHAVIOR;
 
         static {
             BUILDER.push("Configs for Mod Browser");
             REFRESH_TOKEN = BUILDER.define("Refresh Token","");
+            SHOW_PROHIBITED_MODS = BUILDER.define("Show prohibited mods",false);
+            FIRST_START = BUILDER.define("first start",true);
+            AUTO_UPDATE_BEHAVIOR = BUILDER.defineEnum("Automatic search/install updates", AutoUpdate.AutoUpdateBehavior.NO_AUTO_UPDATE);
             BUILDER.pop();
             SPEC = BUILDER.build();
         }

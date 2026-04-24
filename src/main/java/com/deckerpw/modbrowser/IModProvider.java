@@ -9,6 +9,7 @@ public interface IModProvider {
 
     List<Entrys.BrowseListEntry> getMods(String searchFilter, int page, int pageSize) throws IOException ;
 
-    ArrayList<File> getModFiles(String identifier) throws IOException;
+    ArrayList<File> getModFiles(Mod mod) throws IOException;
 
+    File getModFile(String id) throws IOException;
 }

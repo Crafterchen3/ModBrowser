@@ -14,6 +14,7 @@ import java.io.InputStream;
 public class Mod implements PackSelectionModel.Entry {
 
     public String id;
+    public String sid;
     public boolean distribute = true;
     public String title;
     public String description;

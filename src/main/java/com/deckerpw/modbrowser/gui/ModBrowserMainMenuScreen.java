@@ -1,5 +1,6 @@
 package com.deckerpw.modbrowser.gui;
 
+import com.deckerpw.modbrowser.AutoUpdate;
 import com.deckerpw.modbrowser.ModBrowser;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.ImageButton;
@@ -34,5 +35,7 @@ public class ModBrowserMainMenuScreen extends TitleScreen {
         this.addRenderableWidget(new Button(this.width / 2 - 100+24, l + 24 * 2, 98-24, 20, new TranslatableComponent("fml.menu.mods"), button -> {
             this.minecraft.setScreen(new net.minecraftforge.client.gui.ModListScreen(this));
         }));
-    }
+   }
+
+
 }

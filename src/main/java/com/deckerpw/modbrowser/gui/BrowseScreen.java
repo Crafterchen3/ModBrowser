@@ -1,21 +1,18 @@
 package com.deckerpw.modbrowser.gui;
 
 import com.deckerpw.modbrowser.*;
+import com.deckerpw.modbrowser.gui.component.ImageTextButton;
 import com.deckerpw.modbrowser.gui.component.ObjectSelectionList;
 import com.deckerpw.modbrowser.gui.component.tabs.TabButton;
 import com.deckerpw.modbrowser.gui.component.tabs.TabManager;
-import com.google.common.util.concurrent.Runnables;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
 import net.minecraft.Util;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.ChatComponent;
-import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.components.PlainTextButton;
-import net.minecraft.client.gui.screens.AccessibilityOptionsScreen;
+import net.minecraft.client.gui.components.*;
+import net.minecraft.client.gui.components.toasts.SystemToast;
+import net.minecraft.client.gui.components.toasts.ToastComponent;
 import net.minecraft.client.gui.screens.ConfirmLinkScreen;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.gui.screens.WinScreen;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
@@ -25,6 +22,7 @@ import net.minecraft.resources.ResourceLocation;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 public class BrowseScreen extends Screen {
@@ -47,6 +45,9 @@ public class BrowseScreen extends Screen {
     private final TabManager manager = new TabManager();
     private PlainTextButton plainTextButton;
     private int prohibited = 0;
+    private ToastComponent toast;
+    private String message1;
+    private String message2;
 
     public BrowseScreen(Screen lastScreen) {
         this(lastScreen, new TranslatableComponent("browse.name"));
@@ -57,7 +58,6 @@ public class BrowseScreen extends Screen {
         this.lastScreen = lastScreen;
     }
 
-
     public ModBrowser.ModType getCurrentModType(){
         return currentModType;
     }
@@ -66,7 +66,7 @@ public class BrowseScreen extends Screen {
         return downloadList.size() >0 ? Component.nullToEmpty(CommonComponents.GUI_DONE.getString()+ " (Download "+downloadList.size()+" files)") : CommonComponents.GUI_DONE;
     }
 
-    public boolean existsMod(String id){
+    public boolean existsMod(int id){
         for (File file :
                 downloadList) {
             if (Objects.equals(file.mod.mod.id, id)) return true;
@@ -74,51 +74,126 @@ public class BrowseScreen extends Screen {
         return false;
     }
 
-    public void selectMod(String id){
-        if (currentModType == ModBrowser.ModType.FILES){
-            this.downloadList.remove(Integer.parseInt(id));
+    public void selectMod(Mod mod){
+        if (mod.id != ModBrowser.GHOST_ID) {
+            if (currentModType == ModBrowser.ModType.FILES) {
+                this.downloadList.remove(mod);
 
-            thread.stop();
-            index = 0;
-            modList.children().clear();
-            full = false;
-            loadMore();
-            exitButton.setMessage(getExitMessage());
+                thread.stop();
+                index = 0;
+                modList.children().clear();
+                full = false;
+                loadMore();
+                exitButton.setMessage(getExitMessage());
+            } else if (!existsMod(mod.id)) {
+                try {
+                    ArrayList<File> files = mp.getModFiles(mod);
+                    for (File f :
+                            files) {
+                        if (!existsMod(f.mod.mod.id)) downloadList.add(f);
+                    }
+                    ArrayList<File> filter = new ArrayList<>();
+                    for (File file :
+                            files) {
+                        if (ModBrowser.index.isModInstalled(file.mod.mod.id) && ModBrowser.index.getIndex(file.mod.mod.id).fileName.equals(file.fileName)) {
+                            filter.add(file);
+                        }
+                    }
+                    if (filter.size() > 0) {
+                        toast.addToast(new SystemToast(SystemToast.SystemToastIds.TUTORIAL_HINT, new TranslatableComponent("browse.toast.general_update.title"), new TranslatableComponent("browse.toast.general_update.subtitle", filter.size())));
+                    }
+                    downloadList.removeAll(filter);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                exitButton.setMessage(getExitMessage());
+            }
         }
-        else if (!existsMod(id)){
+    }
+
+    public void updateMods(){
+        Thread thread1 = new Thread(() -> {
+            Object[] mods = ModBrowser.index.modsIndex.keySet().toArray();
+            Object[] resourcepacks = ModBrowser.index.resourcepacksIndex.keySet().toArray();
             try {
-                ArrayList<File> files = mp.getModFiles(id);
+                ArrayList<File> results = new ArrayList<>();
+                ArrayList<File> files = new ArrayList<>();
+                message1 = "Gathering Files:";
+                message2 = "0%";
+                float i = 0;
+                for (Object id :
+                        mods) {
+                    File modFile = mp.getModFile(Integer.parseInt(id.toString()));
+                    modFile.mod.mod.modType = ModBrowser.ModType.MODS;
+                    files.add(modFile);
+                    i++;
+                    message2 = ((int)((i/mods.length)*100))+"%";
+                }
+                message2 = "0%";
+                i = 0;
+                for (Object id :
+                        resourcepacks) {
+                    File modFile = mp.getModFile(Integer.parseInt(id.toString()));
+                    modFile.mod.mod.modType = ModBrowser.ModType.RESOURCE_PACKS;
+                    files.add(modFile);
+                    i++;
+                    message2 = ((int)((i/resourcepacks.length)*100))+"%";
+                }
                 for (File f :
                         files) {
-                    if (!existsMod(f.mod.mod.id)) downloadList.add(f);
+                    if (!existsMod(f.mod.mod.id)) results.add(f);
                 }
+                ArrayList<File> filter = new ArrayList<>();
+                i = 0;
+                message1 = "Comparing Files:";
+                message2 = "0%";
+                for (File file :
+                        files) {
+                    if (ModBrowser.index.isModInstalled(file.mod.mod.id) && ModBrowser.index.getIndex(file.mod.mod.id).fileName.equals(file.fileName))
+                    {
+                        filter.add(file);
+                        message2 = ((int)((i/files.size())*100))+"%";
+                    }
+                    i++;
+                }
+                message1 = "";
+                message2 = "";
+                results.removeAll(filter);
+                if (results.size() > 0)
+                    toast.addToast(new SystemToast(SystemToast.SystemToastIds.TUTORIAL_HINT,new TranslatableComponent("browse.toast.update_found.title"),new TranslatableComponent("browse.toast.update_found.subtitle",results.size())));
+                else
+                    toast.addToast(new SystemToast(SystemToast.SystemToastIds.TUTORIAL_HINT,new TranslatableComponent("browse.toast.up-to-date.title"),new TranslatableComponent("browse.toast.up-to-date.subtitle",files.size())));
+                downloadList.addAll(results);
+
             } catch (IOException e) {
                 e.printStackTrace();
             }
             exitButton.setMessage(getExitMessage());
-        }
-
+        });
+        thread1.start();
     }
 
     public void thread(){
         if (!full) {
             this.modList.children().add(loadingEntry);
             try {
-                Entrys.BrowseListEntry entry = mp.getMods(searchBox.getValue(), index, 1).get(0);
-                if (!entry.mod.distribute) {
-                    this.modList.children().remove(this.modList.children().size() - 1);
-                    prohibited++;
-                    updateProhibitStatus();
-                    index++;
-                    thread();
-                } else {
-                    if (entry.mod.id == ModBrowser.GHOST_ID) {
-                        full = true;
+                List<Entrys.BrowseListEntry> entrys = mp.getMods(searchBox.getValue(), index, 5);
+                for (Entrys.BrowseListEntry entry : entrys) {
+                    if (!entry.mod.distribute && !ModBrowser.ModBrowserConfigs.SHOW_PROHIBITED_MODS.get()) {
+                        this.modList.children().remove(this.modList.children().size() - 1);
+                        prohibited++;
+                        updateProhibitStatus();
+                        index++;
+                        thread();
+                    } else {
+                        if (entry.mod.id == ModBrowser.GHOST_ID) {
+                            full = true;
+                        }
+                        if (!full || this.modList.children().size() == 1) {
+                            this.modList.children().set(this.modList.children().size() - 1, entry);
+                        } else this.modList.children().remove(this.modList.children().size() - 1);
+                        index++;
                     }
-                    if (!full || this.modList.children().size() == 1) {
-                        this.modList.children().set(this.modList.children().size() - 1, entry);
-                    } else this.modList.children().remove(this.modList.children().size() - 1);
-                    index++;
                 }
 
             } catch (IOException e) {
@@ -183,6 +258,12 @@ public class BrowseScreen extends Screen {
         exitButton =  new Button(this.width / 2 - 100, this.height - 28, 200, 20, getExitMessage(), (p_96257_) -> {
             onClose();
         });
+        this.addRenderableWidget(new ImageButton(this.width / 2 - 122, this.height - 28, 20, 20, 160, 32, 20,new ResourceLocation(ModBrowser.MOD_ID, "textures/gui/widgets.png"), 256, 256,(p_96257_) -> {
+            minecraft.setScreen(new SetupScreen(new TranslatableComponent("setup.settings"),this));
+        }));
+        this.addRenderableWidget(new ImageTextButton(this.width / 2 - 100 -5 - 120, 22, 120, 20, 40, 32, 20, new ResourceLocation(ModBrowser.MOD_ID, "textures/gui/widgets.png"), 256, 256, (p_96791_) -> {
+            updateMods();
+        }, new TranslatableComponent("browse.update_button")));
 
 
 
@@ -205,7 +286,7 @@ public class BrowseScreen extends Screen {
         });
         this.addRenderableWidget(exitButton);
 
-        mp = new Curseforge(minecraft,modList,this);
+        mp = new Modrinth(minecraft,modList,this);
         this.setInitialFocus(this.searchBox);
         Mod loadingMod = new Mod();
         loadingMod.title = "Loading...";
@@ -214,6 +295,7 @@ public class BrowseScreen extends Screen {
         loadingMod.description = "";
         loadingMod.category = "";
         this.loadingEntry = new Entrys.BrowseListEntry(minecraft,modList,this,loadingMod, false);
+        this.toast = minecraft.getToasts();
         refresh();
     }
 
@@ -247,7 +329,6 @@ public class BrowseScreen extends Screen {
         renderBackground(p_96562_);
         this.modList.render(p_96562_, p_96563_, p_96564_, p_96565_);
 
-
         Tesselator tesselator = Tesselator.getInstance();
         BufferBuilder bufferbuilder = tesselator.getBuilder();
         RenderSystem.setShader(GameRenderer::getPositionColorShader);
@@ -262,7 +343,8 @@ public class BrowseScreen extends Screen {
         super.render(p_96562_, p_96563_, p_96564_, p_96565_);
         searchBox.render(p_96562_,p_96563_,p_96564_,p_96565_);
         drawCenteredString(p_96562_, this.font, this.title, this.width / 2, 8, 16777215);
-
+        drawString(p_96562_,font, message1,this.width / 2 + 100 +5, 23, 16777215);
+        drawString(p_96562_,font, message2,this.width / 2 + 100 +5, 23+8+2, 16777215);
     }
 
     @Override

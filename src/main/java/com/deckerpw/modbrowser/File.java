@@ -13,6 +13,7 @@ import java.util.ArrayList;
 public class File {
 
     public int id;
+    public ModIndex.FileIndex index;
     public Entrys.BrowseListEntry mod;
     public String fileName;
     public String downloadUrl;
@@ -24,6 +25,7 @@ public class File {
     public void download(Minecraft mc)throws IOException {
         InputStream in = new URL(downloadUrl).openStream();
         Files.copy(in, Paths.get(mc.gameDirectory.getPath() + mod.mod.modType.prefix, fileName), StandardCopyOption.REPLACE_EXISTING);
+
     }
 
 }
