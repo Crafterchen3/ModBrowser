@@ -27,6 +27,7 @@ public class ModSelectionList extends ObjectSelectionList<ModSelectionList.ListE
     private boolean hasMoreEntries = true;
     private Runnable loadMoreCallback;
     private Consumer<Mod> addToDownloadCallback;
+    private Consumer<Mod> removeFromDownloadCallback;
     private Predicate<Mod> isInDownloadList = mod -> false;
 
     public ModSelectionList(Minecraft minecraft, int width, int height, int y) {
@@ -53,6 +54,10 @@ public class ModSelectionList extends ObjectSelectionList<ModSelectionList.ListE
 
     public void setAddToDownloadCallback(@NotNull Consumer<Mod> addToDownloadCallback) {
         this.addToDownloadCallback = addToDownloadCallback;
+    }
+
+    public void setRemoveFromDownloadCallback(@NotNull Consumer<Mod> removeFromDownloadCallback) {
+        this.removeFromDownloadCallback = removeFromDownloadCallback;
     }
 
     public void setIsInDownloadListPredicate(@NotNull Predicate<Mod> isInDownloadList) {
@@ -137,8 +142,11 @@ public class ModSelectionList extends ObjectSelectionList<ModSelectionList.ListE
 
         @Override
         public boolean mouseClicked(double mouseX, double mouseY, int button) {
-            if (button == 0 && ModSelectionList.this.addToDownloadCallback != null && this.isOverActionButton(mouseX, mouseY, this.lastLeft, this.lastTop, this.lastWidth, this.lastHeight)) {
-                if (!ModSelectionList.this.isInDownloadList.test(this.info)) {
+            if (button == 0 && this.isOverActionButton(mouseX, mouseY, this.lastLeft, this.lastTop, this.lastWidth, this.lastHeight)) {
+                boolean queued = ModSelectionList.this.isInDownloadList.test(this.info);
+                if (queued && ModSelectionList.this.removeFromDownloadCallback != null) {
+                    ModSelectionList.this.removeFromDownloadCallback.accept(this.info);
+                } else if (!queued && ModSelectionList.this.addToDownloadCallback != null) {
                     ModSelectionList.this.addToDownloadCallback.accept(this.info);
                 }
                 return true;
@@ -181,7 +189,7 @@ public class ModSelectionList extends ObjectSelectionList<ModSelectionList.ListE
             int titleColor = ModSelectionList.this.getSelected() == this ? 0xFFE5A0 : 0xFFFFFF;
             int buttonLeft = this.actionButtonLeft(left, width);
             int buttonTop = this.actionButtonTop(top, height);
-            boolean showButton = ModSelectionList.this.addToDownloadCallback != null;
+            boolean showButton = ModSelectionList.this.addToDownloadCallback != null || ModSelectionList.this.removeFromDownloadCallback != null;
 
             // Simple placeholder icon: first letter over a tinted square.
             guiGraphics.fill(iconLeft, iconTop, iconLeft + ICON_SIZE, iconTop + ICON_SIZE, 0xFF3A3A3A);
@@ -200,11 +208,14 @@ public class ModSelectionList extends ObjectSelectionList<ModSelectionList.ListE
             if (showButton) {
                 boolean queued = ModSelectionList.this.isInDownloadList.test(this.info);
                 boolean hoveredButton = this.isMouseOverButton(mouseX, mouseY, buttonLeft, buttonTop);
-                int fillColor = queued ? 0xFF2E7D32 : hoveredButton ? 0xFF5A5A5A : 0xFF3F3F3F;
+                boolean canRemove = queued && ModSelectionList.this.removeFromDownloadCallback != null;
+                int fillColor = canRemove
+                    ? (hoveredButton ? 0xFFA33A3A : 0xFF8C2F2F)
+                    : queued ? 0xFF2E7D32 : hoveredButton ? 0xFF5A5A5A : 0xFF3F3F3F;
                 guiGraphics.fill(buttonLeft, buttonTop, buttonLeft + ACTION_BUTTON_WIDTH, buttonTop + ACTION_BUTTON_HEIGHT, fillColor);
                 guiGraphics.drawCenteredString(
                     ModSelectionList.this.minecraft.font,
-                    queued ? Component.literal("Added") : Component.literal("Add"),
+                    canRemove ? Component.literal("Remove") : queued ? Component.literal("Added") : Component.literal("Add"),
                     buttonLeft + ACTION_BUTTON_WIDTH / 2,
                     buttonTop + 6,
                     0xFFFFFFFF
@@ -223,7 +234,7 @@ public class ModSelectionList extends ObjectSelectionList<ModSelectionList.ListE
         private boolean isOverActionButton(double mouseX, double mouseY, int left, int top, int width, int height) {
             int buttonLeft = this.actionButtonLeft(left, width);
             int buttonTop = this.actionButtonTop(top, height);
-            return ModSelectionList.this.addToDownloadCallback != null
+            return (ModSelectionList.this.addToDownloadCallback != null || ModSelectionList.this.removeFromDownloadCallback != null)
                 && mouseX >= buttonLeft
                 && mouseX < buttonLeft + ACTION_BUTTON_WIDTH
                 && mouseY >= buttonTop

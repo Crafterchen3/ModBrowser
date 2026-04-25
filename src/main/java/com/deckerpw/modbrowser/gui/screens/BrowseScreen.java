@@ -101,6 +101,8 @@ public class BrowseScreen extends Screen {
         this.downloadListView = new ModSelectionList(this.minecraft, this.width, this.height, 0);
         this.downloadListView.setEntries(this.downloadList);
         this.downloadListView.setHasMoreEntries(false);
+        this.downloadListView.setRemoveFromDownloadCallback(this::removeFromDownloadList);
+        this.downloadListView.setIsInDownloadListPredicate(this::isInDownloadList);
         this.resourcePackList = new ModSelectionList(this.minecraft, this.width, this.height, 0);
         this.resourcePackList.setEntries(List.of());
         this.resourcePackList.setLoadMoreCallback(this::requestMoreResourcePacks);
@@ -299,17 +301,30 @@ public class BrowseScreen extends Screen {
                         downloadList.clear();
                         downloadList.addAll(mods);
                         status = Component.literal(mods.size() + " mods to download.");
-                        if (this.downloadListView != null) {
-                            this.downloadListView.setEntries(this.downloadList);
-                            this.downloadListView.setHasMoreEntries(false);
-                        }
-                        if(!this.downloadList.isEmpty()){
-                            exitButton.setMessage(Component.translatable("modbrowser.gui.browsescreen.buttons.download"));
-
-                        }
+                        this.refreshDownloadListUi();
                     });
                 }
             });
+        }
+    }
+
+    private void removeFromDownloadList(@NotNull Mod mod) {
+        if (this.downloadList.remove(mod)) {
+            this.status = Component.literal("Removed " + mod.name.getString() + " from download list.");
+            this.refreshDownloadListUi();
+        }
+    }
+
+    private void refreshDownloadListUi() {
+        if (this.downloadListView != null) {
+            this.downloadListView.setEntries(this.downloadList);
+            this.downloadListView.setHasMoreEntries(false);
+        }
+
+        if (this.exitButton != null) {
+            this.exitButton.setMessage(this.downloadList.isEmpty()
+                ? CommonComponents.GUI_BACK
+                : Component.translatable("modbrowser.gui.browsescreen.buttons.download"));
         }
     }
 
