@@ -1,6 +1,7 @@
 package com.deckerpw.modbrowser.gui.screens;
 
-import com.deckerpw.modbrowser.api.MockModrinthApi;
+import com.deckerpw.modbrowser.api.Modrinth;
+import com.deckerpw.modbrowser.data.Mod;
 import com.deckerpw.modbrowser.gui.components.ModSelectionList;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -18,6 +19,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
 import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
@@ -33,6 +35,7 @@ public class BrowseScreen extends Screen {
     private final Screen parent;
     private final HeaderAndFooterLayout layout = new HeaderAndFooterLayout(this);
     private final TabManager tabManager = new TabManager(this::addRenderableWidget, this::removeWidget);
+    private final List<Mod> downloadList = new ArrayList<>();
     private long activeSearchGeneration;
     @NotNull
     private String activeSearchQuery = "";
@@ -89,6 +92,8 @@ public class BrowseScreen extends Screen {
         this.modsList = new ModSelectionList(this.minecraft, this.width, this.height, 0);
         this.modsList.setEntries(List.of());
         this.modsList.setLoadMoreCallback(this::requestMoreMods);
+        this.modsList.setAddToDownloadCallback(this::addToDownloadList);
+        this.modsList.setIsInDownloadListPredicate(this::isInDownloadList);
         this.resourcePackList = new ModSelectionList(this.minecraft, this.width, this.height, 0);
         this.resourcePackList.setEntries(List.of());
         this.resourcePackList.setLoadMoreCallback(this::requestMoreResourcePacks);
@@ -185,7 +190,7 @@ public class BrowseScreen extends Screen {
         this.modsLoading = true;
         this.modsList.setLoadingMore(true);
 
-        CompletableFuture<MockModrinthApi.Page> future = MockModrinthApi.searchModsPageAsync(query, this.nextModOffset, PAGE_SIZE);
+        CompletableFuture<Modrinth.Page> future = Modrinth.searchModsPageAsync(query, this.nextModOffset, PAGE_SIZE);
         future.thenAccept(page -> {
             if (this.minecraft != null) {
                 this.minecraft.execute(() -> this.applyModsPage(generation, page));
@@ -206,7 +211,7 @@ public class BrowseScreen extends Screen {
         this.resourcePacksLoading = true;
         this.resourcePackList.setLoadingMore(true);
 
-        CompletableFuture<MockModrinthApi.Page> future = MockModrinthApi.searchResourcePacksPageAsync(query, this.nextResourcePackOffset, PAGE_SIZE);
+        CompletableFuture<Modrinth.Page> future = Modrinth.searchResourcePacksPageAsync(query, this.nextResourcePackOffset, PAGE_SIZE);
         future.thenAccept(page -> {
             if (this.minecraft != null) {
                 this.minecraft.execute(() -> this.applyResourcePackPage(generation, page));
@@ -219,7 +224,7 @@ public class BrowseScreen extends Screen {
         });
     }
 
-    private void applyModsPage(long generation, MockModrinthApi.Page page) {
+    private void applyModsPage(long generation, Modrinth.Page page) {
         if (generation != this.searchRequestId.get() || this.modsList == null) {
             return;
         }
@@ -233,7 +238,7 @@ public class BrowseScreen extends Screen {
         }
     }
 
-    private void applyResourcePackPage(long generation, MockModrinthApi.Page page) {
+    private void applyResourcePackPage(long generation, Modrinth.Page page) {
         if (generation != this.searchRequestId.get() || this.resourcePackList == null) {
             return;
         }
@@ -267,6 +272,22 @@ public class BrowseScreen extends Screen {
         if (this.resourcePackList != null) {
             this.resourcePackList.setLoadingMore(false);
         }
+    }
+
+    private void addToDownloadList(@NotNull Mod mod) {
+        if (!this.isInDownloadList(mod)) {
+            this.downloadList.add(mod);
+        }
+    }
+
+    private boolean isInDownloadList(@NotNull Mod mod) {
+        for (Mod queuedMod : this.downloadList) {
+            if (queuedMod.id().equals(mod.id())) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     @Override

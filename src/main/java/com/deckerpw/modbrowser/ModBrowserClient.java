@@ -63,9 +63,4 @@ public class ModBrowserClient {
             Minecraft.getInstance().setScreen(new BrowseScreen(screen));
         }));
     }
-
-    @SubscribeEvent
-    static void onClientSetup(FMLClientSetupEvent event) {
-        ModBrowser.mcVersion = Minecraft.getInstance().getLaunchedVersion();
-    }
 }

@@ -3,6 +3,8 @@ package com.deckerpw.modbrowser.gui.components;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 import com.deckerpw.modbrowser.data.Mod;
 import net.minecraft.client.Minecraft;
@@ -14,6 +16,9 @@ import org.jetbrains.annotations.NotNull;
 public class ModSelectionList extends ObjectSelectionList<ModSelectionList.ListEntry> {
     private static final int ROW_HEIGHT = 40;
     private static final int ICON_SIZE = 20;
+    private static final int ACTION_BUTTON_WIDTH = 56;
+    private static final int ACTION_BUTTON_HEIGHT = 20;
+    private static final int ACTION_BUTTON_RIGHT_PADDING = 6;
     private static final int LOAD_MORE_THRESHOLD = ROW_HEIGHT * 2;
     private final List<Mod> allEntries = new ArrayList<>();
     private String currentFilter = "";
@@ -21,6 +26,8 @@ public class ModSelectionList extends ObjectSelectionList<ModSelectionList.ListE
     private boolean loadingMore;
     private boolean hasMoreEntries = true;
     private Runnable loadMoreCallback;
+    private Consumer<Mod> addToDownloadCallback;
+    private Predicate<Mod> isInDownloadList = mod -> false;
 
     public ModSelectionList(Minecraft minecraft, int width, int height, int y) {
         super(minecraft, width, height, y, ROW_HEIGHT);
@@ -43,6 +50,14 @@ public class ModSelectionList extends ObjectSelectionList<ModSelectionList.ListE
         this.loadMoreCallback = loadMoreCallback;
     }
 
+    public void setAddToDownloadCallback(@NotNull Consumer<Mod> addToDownloadCallback) {
+        this.addToDownloadCallback = addToDownloadCallback;
+    }
+
+    public void setIsInDownloadListPredicate(@NotNull Predicate<Mod> isInDownloadList) {
+        this.isInDownloadList = isInDownloadList;
+    }
+
     public void setLoadingMore(boolean loadingMore) {
         this.loadingMore = loadingMore;
     }
@@ -63,18 +78,16 @@ public class ModSelectionList extends ObjectSelectionList<ModSelectionList.ListE
                 this.addEntry(modEntry);
                 if (info.id().equals(this.expandedModId)) {
                     selectedEntry = modEntry;
-                }
-                if (info.id().equals(this.expandedModId)) {
                     this.addEntry(new DescriptionEntry(info));
                 }
             }
         }
 
         this.setSelected(selectedEntry);
+        addEntry(new FooterEntry());
     }
 
     @Override
-    @NotNull
     public int getRowWidth() {
         return Math.min(360, this.width - 16);
     }
@@ -107,18 +120,29 @@ public class ModSelectionList extends ObjectSelectionList<ModSelectionList.ListE
 
     private class ModEntry extends ListEntry {
         private final Mod info;
+        private int lastLeft;
+        private int lastTop;
+        private int lastWidth;
+        private int lastHeight;
 
         private ModEntry(Mod info) {
             this.info = info;
         }
 
         @Override
-        public Component getNarration() {
+        public @NotNull Component getNarration() {
             return Component.translatable("narrator.select", this.info.name());
         }
 
         @Override
         public boolean mouseClicked(double mouseX, double mouseY, int button) {
+            if (button == 0 && ModSelectionList.this.addToDownloadCallback != null && this.isOverActionButton(mouseX, mouseY, this.lastLeft, this.lastTop, this.lastWidth, this.lastHeight)) {
+                if (!ModSelectionList.this.isInDownloadList.test(this.info)) {
+                    ModSelectionList.this.addToDownloadCallback.accept(this.info);
+                }
+                return true;
+            }
+
             if (button == 0) {
                 ModSelectionList.this.setSelected(this);
                 if (this.info.id().equals(ModSelectionList.this.expandedModId)) {
@@ -146,10 +170,17 @@ public class ModSelectionList extends ObjectSelectionList<ModSelectionList.ListE
             boolean hovered,
             float partialTick
         ) {
+            this.lastLeft = left;
+            this.lastTop = top;
+            this.lastWidth = width;
+            this.lastHeight = height;
             int iconLeft = left + 6;
             int iconTop = top + (height - ICON_SIZE) / 2;
             int textLeft = iconLeft + ICON_SIZE + 8;
             int titleColor = ModSelectionList.this.getSelected() == this ? 0xFFE5A0 : 0xFFFFFF;
+            int buttonLeft = this.actionButtonLeft(left, width);
+            int buttonTop = this.actionButtonTop(top, height);
+            boolean showButton = ModSelectionList.this.addToDownloadCallback != null;
 
             // Simple placeholder icon: first letter over a tinted square.
             guiGraphics.fill(iconLeft, iconTop, iconLeft + ICON_SIZE, iconTop + ICON_SIZE, 0xFF3A3A3A);
@@ -160,7 +191,46 @@ public class ModSelectionList extends ObjectSelectionList<ModSelectionList.ListE
             guiGraphics.drawString(ModSelectionList.this.minecraft.font, firstLetter, iconLeft + (ICON_SIZE - letterWidth) / 2, iconTop + 6, 0xFFFFFFFF, false);
 
             guiGraphics.drawString(ModSelectionList.this.minecraft.font, this.info.name(), textLeft, top + 5, titleColor, false);
-            guiGraphics.drawString(ModSelectionList.this.minecraft.font, Component.literal("ID: " + this.info.id()), textLeft, top + 17, 0xA0A0A0, false);
+            guiGraphics.drawString(ModSelectionList.this.minecraft.font, Component.literal("by " + this.info.author()), textLeft, top + 17, 0xA0A0A0, false);
+
+            if (showButton) {
+                boolean queued = ModSelectionList.this.isInDownloadList.test(this.info);
+                boolean hoveredButton = this.isMouseOverButton(mouseX, mouseY, buttonLeft, buttonTop);
+                int fillColor = queued ? 0xFF2E7D32 : hoveredButton ? 0xFF5A5A5A : 0xFF3F3F3F;
+                guiGraphics.fill(buttonLeft, buttonTop, buttonLeft + ACTION_BUTTON_WIDTH, buttonTop + ACTION_BUTTON_HEIGHT, fillColor);
+                guiGraphics.drawCenteredString(
+                    ModSelectionList.this.minecraft.font,
+                    queued ? Component.literal("Added") : Component.literal("Add"),
+                    buttonLeft + ACTION_BUTTON_WIDTH / 2,
+                    buttonTop + 6,
+                    0xFFFFFFFF
+                );
+            }
+        }
+
+        private int actionButtonLeft(int left, int width) {
+            return left + width - ACTION_BUTTON_WIDTH - ACTION_BUTTON_RIGHT_PADDING;
+        }
+
+        private int actionButtonTop(int top, int height) {
+            return top + (height - ACTION_BUTTON_HEIGHT) / 2;
+        }
+
+        private boolean isOverActionButton(double mouseX, double mouseY, int left, int top, int width, int height) {
+            int buttonLeft = this.actionButtonLeft(left, width);
+            int buttonTop = this.actionButtonTop(top, height);
+            return ModSelectionList.this.addToDownloadCallback != null
+                && mouseX >= buttonLeft
+                && mouseX < buttonLeft + ACTION_BUTTON_WIDTH
+                && mouseY >= buttonTop
+                && mouseY < buttonTop + ACTION_BUTTON_HEIGHT;
+        }
+
+        private boolean isMouseOverButton(double mouseX, double mouseY, int buttonLeft, int buttonTop) {
+            return mouseX >= buttonLeft
+                && mouseX < buttonLeft + ACTION_BUTTON_WIDTH
+                && mouseY >= buttonTop
+                && mouseY < buttonTop + ACTION_BUTTON_HEIGHT;
         }
     }
 
@@ -172,7 +242,7 @@ public class ModSelectionList extends ObjectSelectionList<ModSelectionList.ListE
         }
 
         @Override
-        public Component getNarration() {
+        public @NotNull Component getNarration() {
             return this.info.summary();
         }
 
@@ -196,6 +266,24 @@ public class ModSelectionList extends ObjectSelectionList<ModSelectionList.ListE
         ) {
             int textLeft = left + 6 + ICON_SIZE + 8;
             guiGraphics.drawWordWrap(ModSelectionList.this.minecraft.font, this.info.summary(), textLeft, top + 3, Math.max(40, width - (ICON_SIZE + 20)), 0xBFBFBF);
+        }
+    }
+
+    private class FooterEntry extends ListEntry{
+
+        @Override
+        public @NotNull Component getNarration() {
+            return Component.literal("Footer");
+        }
+
+        @Override
+        public boolean mouseClicked(double mouseX, double mouseY, int button) {
+            return false;
+        }
+
+        @Override
+        public void render(GuiGraphics guiGraphics, int index, int top, int left, int width, int height, int mouseX, int mouseY, boolean hovering, float partialTick) {
+            guiGraphics.drawCenteredString(ModSelectionList.this.minecraft.font, Component.literal(loadingMore ? "Loading..." : "End of list"), left + width / 2, top + (height - 8) / 2, 0xBFBFBF);
         }
     }
 }
