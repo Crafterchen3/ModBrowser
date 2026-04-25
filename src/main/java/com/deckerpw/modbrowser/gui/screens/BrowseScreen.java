@@ -50,9 +50,13 @@ public class BrowseScreen extends Screen {
     @Nullable
     private ModSelectionList modsList;
     @Nullable
+    private ModSelectionList downloadListView;
+    @Nullable
     private ModSelectionList resourcePackList;
     @Nullable
     private TabNavigationBar tabNavigationBar;
+    private Component status = Component.empty();
+    private Button exitButton;
 
     public BrowseScreen(Screen parent) {
         super(Component.translatable("modbrowser.gui.browsescreen.title"));
@@ -94,17 +98,23 @@ public class BrowseScreen extends Screen {
         this.modsList.setLoadMoreCallback(this::requestMoreMods);
         this.modsList.setAddToDownloadCallback(this::addToDownloadList);
         this.modsList.setIsInDownloadListPredicate(this::isInDownloadList);
+        this.downloadListView = new ModSelectionList(this.minecraft, this.width, this.height, 0);
+        this.downloadListView.setEntries(this.downloadList);
+        this.downloadListView.setHasMoreEntries(false);
         this.resourcePackList = new ModSelectionList(this.minecraft, this.width, this.height, 0);
         this.resourcePackList.setEntries(List.of());
         this.resourcePackList.setLoadMoreCallback(this::requestMoreResourcePacks);
+        this.resourcePackList.setAddToDownloadCallback(this::addToDownloadList);
+        this.resourcePackList.setIsInDownloadListPredicate(this::isInDownloadList);
 
         this.tabNavigationBar = TabNavigationBar.builder(this.tabManager, this.width)
-                .addTabs(new DiscoverTab(), new InstalledTab())
+                .addTabs(new ModsDiscoverTab(), new ResourcePackDiscoverTab(), new DownloadTab())
                 .build();
         this.addRenderableWidget(this.tabNavigationBar);
 
         LinearLayout footerButtons = this.layout.addToFooter(LinearLayout.horizontal().spacing(8));
-        footerButtons.addChild(Button.builder(CommonComponents.GUI_BACK, button -> this.onClose()).build());
+        exitButton = Button.builder(CommonComponents.GUI_BACK, button -> this.onClose()).build();
+        footerButtons.addChild(exitButton);
         this.layout.visitWidgets(widget -> {
             widget.setTabOrderGroup(1);
             this.addRenderableWidget(widget);
@@ -135,6 +145,10 @@ public class BrowseScreen extends Screen {
             ScreenRectangle tabArea = new ScreenRectangle(0, headerBottom, this.width, this.height - this.layout.getFooterHeight() - headerBottom);
             if (this.modsList != null) {
                 this.modsList.updateSizeAndPosition(tabArea.width(), tabArea.height(), tabArea.top());
+            }
+
+            if (this.downloadListView != null) {
+                this.downloadListView.updateSizeAndPosition(tabArea.width(), tabArea.height(), tabArea.top());
             }
 
             if (this.resourcePackList != null) {
@@ -277,17 +291,30 @@ public class BrowseScreen extends Screen {
     private void addToDownloadList(@NotNull Mod mod) {
         if (!this.isInDownloadList(mod)) {
             this.downloadList.add(mod);
+            status = Component.literal("Added " + mod.name.getString() + " to download list. Resolving dependencies...");
+            CompletableFuture<List<Mod>> future = Modrinth.resolveDependenciesAsync(downloadList);
+            future.thenAccept(mods -> {
+                if (this.minecraft != null) {
+                    this.minecraft.execute(() -> {
+                        downloadList.clear();
+                        downloadList.addAll(mods);
+                        status = Component.literal(mods.size() + " mods to download.");
+                        if (this.downloadListView != null) {
+                            this.downloadListView.setEntries(this.downloadList);
+                            this.downloadListView.setHasMoreEntries(false);
+                        }
+                        if(!this.downloadList.isEmpty()){
+                            exitButton.setMessage(Component.translatable("modbrowser.gui.browsescreen.buttons.download"));
+
+                        }
+                    });
+                }
+            });
         }
     }
 
     private boolean isInDownloadList(@NotNull Mod mod) {
-        for (Mod queuedMod : this.downloadList) {
-            if (queuedMod.id().equals(mod.id())) {
-                return true;
-            }
-        }
-
-        return false;
+        return downloadList.contains(mod);
     }
 
     @Override
@@ -301,13 +328,19 @@ public class BrowseScreen extends Screen {
     @Override
     public void onClose() {
         if (this.minecraft != null) {
-            this.minecraft.setScreen(this.parent);
+            if (!downloadList.isEmpty()) {
+                this.minecraft.setScreen(new ConfirmDownloadScreen(this, parent, downloadList));
+            } else {
+                this.minecraft.setScreen(this.parent);
+            }
         }
     }
 
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         super.render(guiGraphics, mouseX, mouseY, partialTick);
+        int searchWidth = Math.min(240, this.width - 20);
+        guiGraphics.drawScrollingString(this.font, this.status, 10, (this.width - searchWidth) / 2 - 20,10, 0xA0A0A0);
     }
 
     @Override
@@ -316,10 +349,10 @@ public class BrowseScreen extends Screen {
         this.renderMenuBackground(guiGraphics, 0, this.layout.getHeaderHeight(), this.width, this.height);
     }
 
-    private class DiscoverTab extends GridLayoutTab {
-        private static final Component TITLE = Component.translatable("modbrowser.gui.browsescreen.tab.discover");
+    private class ModsDiscoverTab extends GridLayoutTab {
+        private static final Component TITLE = Component.translatable("modbrowser.gui.browsescreen.tab.mods");
 
-        DiscoverTab() {
+        ModsDiscoverTab() {
             super(TITLE);
             GridLayout.RowHelper rows = this.layout.rowSpacing(8).createRowHelper(1);
             if (BrowseScreen.this.modsList != null) {
@@ -328,10 +361,22 @@ public class BrowseScreen extends Screen {
         }
     }
 
-    private class InstalledTab extends GridLayoutTab {
-        private static final Component TITLE = Component.translatable("modbrowser.gui.browsescreen.tab.installed");
+    private class DownloadTab extends GridLayoutTab {
+        private static final Component TITLE = Component.translatable("modbrowser.gui.browsescreen.tab.downloads");
 
-        InstalledTab() {
+        DownloadTab() {
+            super(TITLE);
+            GridLayout.RowHelper rows = this.layout.rowSpacing(8).createRowHelper(1);
+            if (BrowseScreen.this.downloadListView != null) {
+                rows.addChild(BrowseScreen.this.downloadListView);
+            }
+        }
+    }
+
+    private class ResourcePackDiscoverTab extends GridLayoutTab {
+        private static final Component TITLE = Component.translatable("modbrowser.gui.browsescreen.tab.resourcepacks");
+
+        ResourcePackDiscoverTab() {
             super(TITLE);
             GridLayout.RowHelper rows = this.layout.rowSpacing(8).createRowHelper(1);
             if (BrowseScreen.this.resourcePackList != null) {

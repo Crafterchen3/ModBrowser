@@ -35,6 +35,7 @@ public class ModSelectionList extends ObjectSelectionList<ModSelectionList.ListE
     }
 
     public void setEntries(@NotNull List<Mod> entries) {
+        this.setScrollAmount(0);
         this.allEntries.clear();
         this.allEntries.addAll(entries);
         this.expandedModId = null;
@@ -76,7 +77,7 @@ public class ModSelectionList extends ObjectSelectionList<ModSelectionList.ListE
             if (filter.isEmpty() || matchesFilter(info, filter)) {
                 ModEntry modEntry = new ModEntry(info);
                 this.addEntry(modEntry);
-                if (info.id().equals(this.expandedModId)) {
+                if (info.id.equals(this.expandedModId)) {
                     selectedEntry = modEntry;
                     this.addEntry(new DescriptionEntry(info));
                 }
@@ -110,9 +111,9 @@ public class ModSelectionList extends ObjectSelectionList<ModSelectionList.ListE
     }
 
     private static boolean matchesFilter(Mod info, String filter) {
-        return info.id().toLowerCase(Locale.ROOT).contains(filter)
-            || info.name().getString().toLowerCase(Locale.ROOT).contains(filter)
-            || info.summary().getString().toLowerCase(Locale.ROOT).contains(filter);
+        return info.id.toLowerCase(Locale.ROOT).contains(filter)
+            || info.name.getString().toLowerCase(Locale.ROOT).contains(filter)
+            || info.summary.getString().toLowerCase(Locale.ROOT).contains(filter);
     }
 
     static abstract class ListEntry extends ObjectSelectionList.Entry<ListEntry> {
@@ -131,7 +132,7 @@ public class ModSelectionList extends ObjectSelectionList<ModSelectionList.ListE
 
         @Override
         public @NotNull Component getNarration() {
-            return Component.translatable("narrator.select", this.info.name());
+            return Component.translatable("narrator.select", this.info.name);
         }
 
         @Override
@@ -145,10 +146,10 @@ public class ModSelectionList extends ObjectSelectionList<ModSelectionList.ListE
 
             if (button == 0) {
                 ModSelectionList.this.setSelected(this);
-                if (this.info.id().equals(ModSelectionList.this.expandedModId)) {
+                if (this.info.id.equals(ModSelectionList.this.expandedModId)) {
                     ModSelectionList.this.expandedModId = null;
                 } else {
-                    ModSelectionList.this.expandedModId = this.info.id();
+                    ModSelectionList.this.expandedModId = this.info.id;
                 }
                 ModSelectionList.this.applyFilter(ModSelectionList.this.currentFilter);
                 return true;
@@ -184,14 +185,17 @@ public class ModSelectionList extends ObjectSelectionList<ModSelectionList.ListE
 
             // Simple placeholder icon: first letter over a tinted square.
             guiGraphics.fill(iconLeft, iconTop, iconLeft + ICON_SIZE, iconTop + ICON_SIZE, 0xFF3A3A3A);
-            String firstLetter = this.info.name().getString().isEmpty()
+            String firstLetter = this.info.name.getString().isEmpty()
                 ? "?"
-                : this.info.name().getString().substring(0, 1).toUpperCase(Locale.ROOT);
+                : this.info.name.getString().substring(0, 1).toUpperCase(Locale.ROOT);
             int letterWidth = ModSelectionList.this.minecraft.font.width(firstLetter);
             guiGraphics.drawString(ModSelectionList.this.minecraft.font, firstLetter, iconLeft + (ICON_SIZE - letterWidth) / 2, iconTop + 6, 0xFFFFFFFF, false);
 
-            guiGraphics.drawString(ModSelectionList.this.minecraft.font, this.info.name(), textLeft, top + 5, titleColor, false);
-            guiGraphics.drawString(ModSelectionList.this.minecraft.font, Component.literal("by " + this.info.author()), textLeft, top + 17, 0xA0A0A0, false);
+            guiGraphics.drawString(ModSelectionList.this.minecraft.font, this.info.name, textLeft, top + 5, titleColor, false);
+            if (this.info.version != null && !showButton)
+                guiGraphics.drawString(ModSelectionList.this.minecraft.font, Component.literal(this.info.version.getFiles().getFirst().getFilename()), textLeft, top + 17, 0xA0A0A0, false);
+            else
+                guiGraphics.drawString(ModSelectionList.this.minecraft.font, Component.literal("by " + this.info.author), textLeft, top + 17, 0xA0A0A0, false);
 
             if (showButton) {
                 boolean queued = ModSelectionList.this.isInDownloadList.test(this.info);
@@ -243,7 +247,7 @@ public class ModSelectionList extends ObjectSelectionList<ModSelectionList.ListE
 
         @Override
         public @NotNull Component getNarration() {
-            return this.info.summary();
+            return this.info.summary;
         }
 
         @Override
@@ -265,7 +269,7 @@ public class ModSelectionList extends ObjectSelectionList<ModSelectionList.ListE
             float partialTick
         ) {
             int textLeft = left + 6 + ICON_SIZE + 8;
-            guiGraphics.drawWordWrap(ModSelectionList.this.minecraft.font, this.info.summary(), textLeft, top + 3, Math.max(40, width - (ICON_SIZE + 20)), 0xBFBFBF);
+            guiGraphics.drawWordWrap(ModSelectionList.this.minecraft.font, this.info.summary, textLeft, top + 3, Math.max(40, width - (ICON_SIZE + 20)), 0xBFBFBF);
         }
     }
 

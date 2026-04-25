@@ -50,7 +50,7 @@ public class ModBrowserClient {
             return; // Mods button not present (or key changed)
 
         int myW = 20, myH = 20;
-        int padding = 2;
+        int padding = 4;
 
         ResourceLocation ICON = ResourceLocation.fromNamespaceAndPath(
                 ModBrowser.MODID, "textures/gui/buttons/browse_button.png"
