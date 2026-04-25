@@ -28,6 +28,10 @@ sourceSets.main.resources {
 
 repositories {
     mavenCentral()
+
+    flatDir {
+        dir 'libs'
+    }
 }
 
 base {
@@ -118,8 +122,17 @@ configurations {
 }
 
 dependencies {
-    implementation 'dev.masecla:Modrinth4J:2.0.0'
-    additionalRuntimeClasspath 'dev.masecla:Modrinth4J:2.0.0'
+    implementation 'com.deckerpw:ModrinthAPI:1.0'
+    additionalRuntimeClasspath 'com.deckerpw:ModrinthAPI:1.0'
+
+    jarJar(implementation(group: 'com.deckerpw', name: 'ModrinthAPI')) {
+        version {
+            // Version used in your workspace and bundled in mod jar
+            prefer '1.0'
+        }
+    }
+
+
     // Example optional mod dependency with JEI
     // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime
     // compileOnly "mezz.jei:jei-${mc_version}-common-api:${jei_version}"

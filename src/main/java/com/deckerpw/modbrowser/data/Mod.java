@@ -1,7 +1,7 @@
 package com.deckerpw.modbrowser.data;
 
-import masecla.modrinth4j.model.project.ProjectType;
-import masecla.modrinth4j.model.version.ProjectVersion;
+import com.deckerpw.modrinth.data.ProjectType;
+import com.deckerpw.modrinth.data.Version;
 import net.minecraft.network.chat.Component;
 
 import javax.annotation.Nullable;
@@ -16,7 +16,7 @@ public class Mod {
     public final Component summary;
     public final ProjectType type;
     @Nullable
-    public ProjectVersion version;
+    public Version version;
 
     public Mod(String id, String slug, String iconUrl, String author, Component name, Component summary, ProjectType type) {
         this.id = id;

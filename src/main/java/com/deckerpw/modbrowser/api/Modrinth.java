@@ -2,17 +2,19 @@ package com.deckerpw.modbrowser.api;
 
 import com.deckerpw.modbrowser.ModBrowser;
 import com.deckerpw.modbrowser.data.Mod;
-import masecla.modrinth4j.endpoints.SearchEndpoint;
-import masecla.modrinth4j.endpoints.version.GetProjectVersions;
-import masecla.modrinth4j.main.ModrinthAPI;
-import masecla.modrinth4j.model.project.Project;
-import masecla.modrinth4j.model.project.ProjectType;
-import masecla.modrinth4j.model.search.Facet;
-import masecla.modrinth4j.model.search.FacetCollection;
-import masecla.modrinth4j.model.version.ProjectVersion;
+import com.deckerpw.modrinth.Facets;
+import com.deckerpw.modrinth.ModrinthAPI;
+import com.deckerpw.modrinth.data.Project;
+import com.deckerpw.modrinth.data.ProjectType;
+import com.deckerpw.modrinth.data.Version;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 
+import java.io.InputStream;
+import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -20,11 +22,6 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.io.InputStream;
-import java.net.URI;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 
 public final class Modrinth {
 
@@ -33,7 +30,7 @@ public final class Modrinth {
         thread.setDaemon(true);
         return thread;
     });
-    private static final ModrinthAPI client = ModrinthAPI.rateLimited(null, "");
+    private static final ModrinthAPI client = new ModrinthAPI();
 
     public static CompletableFuture<Page> searchModsPageAsync(String query, int offset, int limit) {
         return CompletableFuture.supplyAsync(() -> page(query, offset, limit, ProjectType.MOD), EXECUTOR);
@@ -51,49 +48,26 @@ public final class Modrinth {
         return CompletableFuture.runAsync(() -> downloadMod(mod), EXECUTOR);
     }
 
-    private static FacetCollection facets(ProjectType projectType) {
-        FacetCollection collection = null;
+    private static Facets facets(ProjectType projectType) {
+        Facets collection = null;
         switch (projectType) {
-            case MOD -> collection = FacetCollection.builder()
-                    .facets(
-                            List.of(
-                                    List.of(
-                                            Facet.projectType(ProjectType.MOD)
-                                    ),
-                                    List.of(
-                                            Facet.category("neoforge")
-                                    ),
-                                    List.of(
-                                            Facet.version(ModBrowser.MC_VERSION)
-                                    )
-                            )
-                    )
-                    .build();
-            case RESOURCEPACK -> collection = FacetCollection.builder()
-                    .facets(
-                            List.of(
-                                    List.of(
-                                            Facet.projectType(ProjectType.RESOURCEPACK)
-                                    ),
-                                    List.of(
-                                            Facet.version(ModBrowser.MC_VERSION)
-                                    )
-                            )
-                    )
-                    .build();
+            case MOD -> collection = Facets.empty()
+                    .projectType(ProjectType.MOD)
+                    .category("neoforge")
+                    .version(ModBrowser.MC_VERSION);
+            case RESOURCEPACK -> collection = Facets.empty()
+                    .projectType(ProjectType.RESOURCEPACK)
+                    .version(ModBrowser.MC_VERSION);
         }
         return collection;
     }
 
     private static Page page(String query, int offset, int limit, ProjectType projectType) {
-        SearchEndpoint.SearchResponse response = client.search(SearchEndpoint.SearchRequest.builder().query(query).offset(offset).limit(limit)
-                .facets(facets(projectType))
-                .index(SearchEndpoint.IndexType.RELEVANCE)
-                .build()).join();
+        List<Project> projects = client.search(query, facets(projectType), offset, limit).join();
         ArrayList<Mod> list = new ArrayList<>();
-        for (SearchEndpoint.SearchResult hit : response.getHits()) {
+        for (Project hit : projects) {
             list.add(new Mod(
-                    hit.getProjectId(), hit.getSlug(), hit.getIconUrl(), hit.getAuthor(), Component.literal(hit.getTitle()), Component.literal(hit.getDescription()),projectType
+                    hit.id, hit.slug, hit.iconUrl, hit.author, Component.literal(hit.name), Component.literal(hit.summary), projectType
             ));
         }
         if (list.isEmpty())
@@ -108,28 +82,20 @@ public final class Modrinth {
             Mod mod = toVisit.pop();
             if (resolved.contains(mod))
                 continue;
-            List<ProjectVersion> versions;
-            if (mod.type == ProjectType.RESOURCEPACK){
-                 versions = client.versions().getProjectVersions(mod.slug, GetProjectVersions.GetProjectVersionsRequest.builder()
-                        .gameVersions(List.of(ModBrowser.MC_VERSION))
-                        .build()).join();
-            }else {
-                versions = client.versions().getProjectVersions(mod.slug, GetProjectVersions.GetProjectVersionsRequest.builder()
-                        .loaders(List.of("neoforge"))
-                        .gameVersions(List.of(ModBrowser.MC_VERSION))
-                        .build()).join();
+            Version version;
+            if (mod.type == ProjectType.RESOURCEPACK) {
+                version = client.getProjectVersion(mod.slug, null, ModBrowser.MC_VERSION).join();
+            } else {
+                version = client.getProjectVersion(mod.slug, "neoforge", ModBrowser.MC_VERSION).join();
             }
-            if (versions.isEmpty())
-                continue;
-            ProjectVersion version = versions.getFirst();
             mod.version = version;
             resolved.add(mod);
-            for (ProjectVersion.ProjectDependency dependency : version.getDependencies()) {
-                if (dependency.getDependencyType() == ProjectVersion.ProjectDependencyType.REQUIRED) {
-                    if (resolved.stream().anyMatch(m -> m.id.equals(dependency.getProjectId())))
+            for (Version.VersionDependency dependency : version.dependencies) {
+                if (dependency.type == Version.VersionDependency.DependencyType.REQUIRED) {
+                    if (resolved.stream().anyMatch(m -> m.id.equals(dependency.projectId)))
                         continue;
-                    Project project = client.projects().get(dependency.getProjectId()).join();
-                    toVisit.add(new Mod(project.getId(), project.getSlug(), project.getIconUrl(), project.getTeam(), Component.literal(project.getTitle()), Component.literal(project.getDescription()),project.getProjectType()));
+                    Project project = client.getProject(dependency.projectId).join();
+                    toVisit.add(new Mod(project.id, project.slug, project.iconUrl, project.author, Component.literal(project.name), Component.literal(project.summary), project.type));
                 }
             }
         }
@@ -139,20 +105,19 @@ public final class Modrinth {
     private static void downloadMod(Mod mod) {
         if (mod.version == null)
             return;
-        mod.version.getFiles().stream().filter(ProjectVersion.ProjectFile::isPrimary).findFirst().ifPresent(file -> {
-            String url = file.getUrl();
-            Path destination = Minecraft.getInstance().gameDirectory.toPath()
-                    .resolve(mod.type == ProjectType.MOD ? "mods" : "resourcepacks")
-                    .resolve(file.getFilename());
-            try {
-                Files.createDirectories(destination.getParent());
-                try (InputStream inputStream = URI.create(url).toURL().openStream()) {
-                    Files.copy(inputStream, destination, StandardCopyOption.REPLACE_EXISTING);
-                }
-            } catch (Exception exception) {
-                throw new RuntimeException("Failed to download " + url + " to " + destination, exception);
+        Version.VersionFile file = mod.version.primaryFile;
+        String url = file.url;
+        Path destination = Minecraft.getInstance().gameDirectory.toPath()
+                .resolve(mod.type == ProjectType.MOD ? "mods" : "resourcepacks")
+                .resolve(file.filename);
+        try {
+            Files.createDirectories(destination.getParent());
+            try (InputStream inputStream = URI.create(url).toURL().openStream()) {
+                Files.copy(inputStream, destination, StandardCopyOption.REPLACE_EXISTING);
             }
-        });
+        } catch (Exception exception) {
+            throw new RuntimeException("Failed to download " + url + " to " + destination, exception);
+        }
     }
 
     public record Page(List<Mod> entries, Integer nextOffset) {

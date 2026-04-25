@@ -200,8 +200,8 @@ public class ModSelectionList extends ObjectSelectionList<ModSelectionList.ListE
             guiGraphics.drawString(ModSelectionList.this.minecraft.font, firstLetter, iconLeft + (ICON_SIZE - letterWidth) / 2, iconTop + 6, 0xFFFFFFFF, false);
 
             guiGraphics.drawString(ModSelectionList.this.minecraft.font, this.info.name, textLeft, top + 5, titleColor, false);
-            if (this.info.version != null && !showButton)
-                guiGraphics.drawString(ModSelectionList.this.minecraft.font, Component.literal(this.info.version.getFiles().getFirst().getFilename()), textLeft, top + 17, 0xA0A0A0, false);
+            if (this.info.version != null && removeFromDownloadCallback != null)
+                guiGraphics.drawString(ModSelectionList.this.minecraft.font, Component.literal(this.info.version.primaryFile.filename), textLeft, top + 17, 0xA0A0A0, false);
             else
                 guiGraphics.drawString(ModSelectionList.this.minecraft.font, Component.literal("by " + this.info.author), textLeft, top + 17, 0xA0A0A0, false);
 
