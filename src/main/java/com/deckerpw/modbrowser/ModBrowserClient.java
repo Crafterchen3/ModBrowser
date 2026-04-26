@@ -17,6 +17,7 @@ import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.neoforge.client.event.ScreenEvent;
 import net.neoforged.neoforge.client.gui.ConfigurationScreen;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
+import net.neoforged.neoforge.client.gui.ModListScreen;
 
 // This class will not load on dedicated servers. Accessing client side code from here is safe.
 @Mod(value = ModBrowser.MODID, dist = Dist.CLIENT)
@@ -33,34 +34,61 @@ public class ModBrowserClient {
     @SubscribeEvent
     public static void onScreenInit(ScreenEvent.Init.Post event) {
         Screen screen = event.getScreen();
-        if (!(screen instanceof TitleScreen))
-            return;
+        if (screen instanceof TitleScreen){
+            // NeoForge/FML's mods button translation key (same one Create uses)
+            String modsText = I18n.get("fml.menu.mods");
 
-        // NeoForge/FML's mods button translation key (same one Create uses)
-        String modsText = I18n.get("fml.menu.mods");
+            AbstractWidget modsWidget = event.getListenersList().stream()
+                    .filter(w -> w instanceof AbstractWidget)
+                    .map(w -> (AbstractWidget) w)
+                    .filter(w -> w.getMessage().getString().equals(modsText))
+                    .findFirst()
+                    .orElse(null);
 
-        AbstractWidget modsWidget = event.getListenersList().stream()
-                .filter(w -> w instanceof AbstractWidget)
-                .map(w -> (AbstractWidget) w)
-                .filter(w -> w.getMessage().getString().equals(modsText))
-                .findFirst()
-                .orElse(null);
+            if (modsWidget == null)
+                return; // Mods button not present (or key changed)
 
-        if (modsWidget == null)
-            return; // Mods button not present (or key changed)
+            int myW = 20, myH = 20;
+            int padding = 4;
 
-        int myW = 20, myH = 20;
-        int padding = 4;
+            ResourceLocation ICON = ResourceLocation.fromNamespaceAndPath(
+                    ModBrowser.MODID, "textures/gui/buttons/browse_button.png"
+            );
 
-        ResourceLocation ICON = ResourceLocation.fromNamespaceAndPath(
-                ModBrowser.MODID, "textures/gui/buttons/browse_button.png"
-        );
+            int x = modsWidget.getX() - myW - padding;
+            int y = modsWidget.getY();
 
-        int x = modsWidget.getX() - myW - padding;
-        int y = modsWidget.getY();
+            event.addListener(new TexturedIconButton(x, y, myW, myH, ICON, b -> {
+                Minecraft.getInstance().setScreen(new BrowseScreen(screen));
+            }));
+        } else if (screen instanceof ModListScreen) {
+            // NeoForge/FML's mods button translation key (same one Create uses)
+            String openModsFolderText = I18n.get("fml.menu.mods.openmodsfolder");
 
-        event.addListener(new TexturedIconButton(x, y, myW, myH, ICON, b -> {
-            Minecraft.getInstance().setScreen(new BrowseScreen(screen));
-        }));
+            AbstractWidget modsWidget = event.getListenersList().stream()
+                    .filter(w -> w instanceof AbstractWidget)
+                    .map(w -> (AbstractWidget) w)
+                    .filter(w -> w.getMessage().getString().equals(openModsFolderText))
+                    .findFirst()
+                    .orElse(null);
+
+            if (modsWidget == null)
+                return; // Mods button not present (or key changed)
+
+            int myW = 20, myH = 20;
+            int padding = 6;
+
+            ResourceLocation ICON = ResourceLocation.fromNamespaceAndPath(
+                    ModBrowser.MODID, "textures/gui/buttons/browse_button.png"
+            );
+
+            int x = modsWidget.getX() + modsWidget.getWidth() + padding;
+            int y = modsWidget.getY();
+
+            event.addListener(new TexturedIconButton(x, y, myW, myH, ICON, b -> {
+                Minecraft.getInstance().setScreen(new BrowseScreen(screen));
+            }));
+        }
+
     }
 }

@@ -11,7 +11,7 @@
   "modbrowser.gui.confirmDownload.message": "Do you want to download the selected mods? (%s mods)",
   "modbrowser.gui.confirmDownload.buttons.yes": "Yes",
   "modbrowser.gui.confirmDownload.buttons.no": "Cancel",
-  "modbrowser.gui.confirmDownload.buttons.exit": "Exit to Main Menu",
+  "modbrowser.gui.confirmDownload.buttons.exit": "Exit",
   "modbrowser.gui.downloadscreen.title": "Download Mods",
   "modbrowser.gui.downloadscreen.status.starting": "Starting download...",
   "modbrowser.gui.downloadscreen.status.downloading": "Downloading %s",

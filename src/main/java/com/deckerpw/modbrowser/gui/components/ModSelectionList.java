@@ -202,28 +202,19 @@ public class ModSelectionList extends ObjectSelectionList<ModSelectionList.ListE
 
             // Simple placeholder icon: first letter over a tinted square.
 
-            BufferedImage icon = this.info.icon;
+            DynamicTexture icon = this.info.icon;
             if (icon != null) {
-                try {
-                    ByteArrayOutputStream os = new ByteArrayOutputStream();
-                    ImageIO.write(icon, "png", os);
-                    InputStream is = new ByteArrayInputStream(os.toByteArray());
-                    DynamicTexture texture = new DynamicTexture(NativeImage.read(is));
-                    texture.upload();
-                    guiGraphics.blit(
-                            Minecraft.getInstance().getTextureManager().register("temp_icon_" + this.info.id, texture),
-                            iconLeft,
-                            iconTop,
-                            0,
-                            0,
-                            ICON_SIZE,
-                            ICON_SIZE,
-                            ICON_SIZE,
-                            ICON_SIZE
-                    );
-                } catch (IOException e) {
-                    drawPlaceholder(guiGraphics, iconLeft, iconTop);
-                }
+                guiGraphics.blit(
+                        Minecraft.getInstance().getTextureManager().register( "projecticon", icon),
+                        iconLeft,
+                        iconTop,
+                        0,
+                        0,
+                        ICON_SIZE,
+                        ICON_SIZE,
+                        ICON_SIZE,
+                        ICON_SIZE
+                );
             }else
                 drawPlaceholder(guiGraphics, iconLeft, iconTop);
 
