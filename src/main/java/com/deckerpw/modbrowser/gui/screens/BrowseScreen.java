@@ -2,6 +2,7 @@ package com.deckerpw.modbrowser.gui.screens;
 
 import com.deckerpw.modbrowser.api.Modrinth;
 import com.deckerpw.modbrowser.data.Mod;
+import com.deckerpw.modbrowser.data.TabDefinition;
 import com.deckerpw.modbrowser.gui.components.ModSelectionList;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -17,15 +18,15 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import org.jetbrains.annotations.NotNull;
 
+import javax.annotation.Nullable;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
-
-import javax.annotation.Nullable;
-import org.jetbrains.annotations.NotNull;
 
 public class BrowseScreen extends Screen {
     private static final int PAGE_SIZE = 1;
@@ -36,31 +37,39 @@ public class BrowseScreen extends Screen {
     private final HeaderAndFooterLayout layout = new HeaderAndFooterLayout(this);
     private final TabManager tabManager = new TabManager(this::addRenderableWidget, this::removeWidget);
     private final List<Mod> downloadList = new ArrayList<>();
+    private final TabDefinition[] tabDefinitions;
     private long activeSearchGeneration;
     @NotNull
     private String activeSearchQuery = "";
-    private int nextModOffset;
-    private int nextResourcePackOffset;
-    private boolean moreModsAvailable = true;
-    private boolean moreResourcePacksAvailable = true;
-    private boolean modsLoading;
-    private boolean resourcePacksLoading;
     @Nullable
     private EditBox searchBox;
     @Nullable
-    private ModSelectionList modsList;
-    @Nullable
     private ModSelectionList downloadListView;
-    @Nullable
-    private ModSelectionList resourcePackList;
     @Nullable
     private TabNavigationBar tabNavigationBar;
     private Component status = Component.empty();
     private Button exitButton;
 
-    public BrowseScreen(Screen parent) {
+    public static BrowseScreen modsAndResourcePacks(Screen parent){
+        return new BrowseScreen(parent, new TabDefinition[]{
+                new TabDefinition(com.deckerpw.modrinth.data.ProjectType.MOD, Component.translatable("modbrowser.gui.browsescreen.tab.mods")),
+                new TabDefinition(com.deckerpw.modrinth.data.ProjectType.RESOURCEPACK, Component.translatable("modbrowser.gui.browsescreen.tab.resourcepacks"))});
+    }
+
+    public static BrowseScreen mods(Screen parent){
+        return new BrowseScreen(parent, new TabDefinition[]{
+                new TabDefinition(com.deckerpw.modrinth.data.ProjectType.MOD, Component.translatable("modbrowser.gui.browsescreen.tab.mods"))});
+    }
+
+    public static BrowseScreen resourcePacks(Screen parent){
+        return new BrowseScreen(parent, new TabDefinition[]{
+                new TabDefinition(com.deckerpw.modrinth.data.ProjectType.RESOURCEPACK, Component.translatable("modbrowser.gui.browsescreen.tab.resourcepacks"))});
+    }
+
+    public BrowseScreen(Screen parent, TabDefinition[] tabDefinitions) {
         super(Component.translatable("modbrowser.gui.browsescreen.title"));
         this.parent = parent;
+        this.tabDefinitions = tabDefinitions;
     }
 
     @Nullable
@@ -93,25 +102,24 @@ public class BrowseScreen extends Screen {
         this.searchBox.setResponder(text -> this.refreshListsAsync());
         this.addRenderableWidget(this.searchBox);
 
-        this.modsList = new ModSelectionList(this.minecraft, this.width, this.height, 0);
-        this.modsList.setEntries(List.of());
-        this.modsList.setLoadMoreCallback(this::requestMoreMods);
-        this.modsList.setAddToDownloadCallback(this::addToDownloadList);
-        this.modsList.setIsInDownloadListPredicate(this::isInDownloadList);
+
+        TabNavigationBar.Builder builder = TabNavigationBar.builder(this.tabManager, this.width);
+
+        for (TabDefinition tabDefinition : tabDefinitions) {
+            tabDefinition.list = new ModSelectionList(this.minecraft, this.width, this.height, 0);
+            tabDefinition.list.setEntries(List.of());
+            tabDefinition.list.setLoadMoreCallback(() -> this.requestMore(tabDefinition));
+            tabDefinition.list.setAddToDownloadCallback(this::addToDownloadList);
+            tabDefinition.list.setIsInDownloadListPredicate(this::isInDownloadList);
+            builder.addTabs(new DiscoverTab(tabDefinition));
+        }
         this.downloadListView = new ModSelectionList(this.minecraft, this.width, this.height, 0);
         this.downloadListView.setEntries(this.downloadList);
         this.downloadListView.setHasMoreEntries(false);
         this.downloadListView.setRemoveFromDownloadCallback(this::removeFromDownloadList);
         this.downloadListView.setIsInDownloadListPredicate(this::isInDownloadList);
-        this.resourcePackList = new ModSelectionList(this.minecraft, this.width, this.height, 0);
-        this.resourcePackList.setEntries(List.of());
-        this.resourcePackList.setLoadMoreCallback(this::requestMoreResourcePacks);
-        this.resourcePackList.setAddToDownloadCallback(this::addToDownloadList);
-        this.resourcePackList.setIsInDownloadListPredicate(this::isInDownloadList);
 
-        this.tabNavigationBar = TabNavigationBar.builder(this.tabManager, this.width)
-                .addTabs(new ModsDiscoverTab(), new ResourcePackDiscoverTab(), new DownloadTab())
-                .build();
+        this.tabNavigationBar = builder.addTabs(new DownloadTab()).build();
         this.addRenderableWidget(this.tabNavigationBar);
 
         LinearLayout footerButtons = this.layout.addToFooter(LinearLayout.horizontal().spacing(8));
@@ -145,16 +153,14 @@ public class BrowseScreen extends Screen {
             int headerBottom = this.tabNavigationBar.getRectangle().bottom();
 
             ScreenRectangle tabArea = new ScreenRectangle(0, headerBottom, this.width, this.height - this.layout.getFooterHeight() - headerBottom);
-            if (this.modsList != null) {
-                this.modsList.updateSizeAndPosition(tabArea.width(), tabArea.height(), tabArea.top());
+
+            for (TabDefinition tabDefinition : tabDefinitions) {
+                if (tabDefinition.list != null)
+                    tabDefinition.list.updateSizeAndPosition(tabArea.width(), tabArea.height(), tabArea.top());
             }
 
             if (this.downloadListView != null) {
                 this.downloadListView.updateSizeAndPosition(tabArea.width(), tabArea.height(), tabArea.top());
-            }
-
-            if (this.resourcePackList != null) {
-                this.resourcePackList.updateSizeAndPosition(tabArea.width(), tabArea.height(), tabArea.top());
             }
 
             this.tabManager.setTabArea(tabArea);
@@ -167,126 +173,67 @@ public class BrowseScreen extends Screen {
         long requestId = this.searchRequestId.incrementAndGet();
         this.activeSearchGeneration = requestId;
         this.activeSearchQuery = this.searchBox != null ? this.searchBox.getValue() : "";
-        this.nextModOffset = 0;
-        this.nextResourcePackOffset = 0;
-        this.moreModsAvailable = true;
-        this.moreResourcePacksAvailable = true;
-        this.modsLoading = false;
-        this.resourcePacksLoading = false;
 
-        if (this.modsList != null) {
-            this.modsList.setLoadingMore(false);
-            this.modsList.setHasMoreEntries(true);
-            this.modsList.setEntries(List.of());
+        for (TabDefinition tabDefinition : tabDefinitions) {
+            tabDefinition.nextOffset = 0;
+            tabDefinition.moreAvailable = true;
+            tabDefinition.loading = false;
+            if (tabDefinition.list != null) {
+                tabDefinition.list.setLoadingMore(false);
+                tabDefinition.list.setHasMoreEntries(true);
+                tabDefinition.list.setEntries(List.of());
+            }
+            this.requestMore(tabDefinition,requestId,this.activeSearchQuery);
         }
-
-        if (this.resourcePackList != null) {
-            this.resourcePackList.setLoadingMore(false);
-            this.resourcePackList.setHasMoreEntries(true);
-            this.resourcePackList.setEntries(List.of());
-        }
-
-        this.requestMoreMods(requestId, this.activeSearchQuery);
-        this.requestMoreResourcePacks(requestId, this.activeSearchQuery);
     }
 
-    private void requestMoreMods() {
-        this.requestMoreMods(this.activeSearchGeneration, this.activeSearchQuery);
+    private void requestMore(TabDefinition definition) {
+        this.requestMore(definition, this.activeSearchGeneration, this.activeSearchQuery);
     }
 
-    private void requestMoreResourcePacks() {
-        this.requestMoreResourcePacks(this.activeSearchGeneration, this.activeSearchQuery);
-    }
-
-    private void requestMoreMods(long generation, @NotNull String query) {
-        if (this.modsList == null || this.modsLoading || !this.moreModsAvailable) {
+    private void requestMore(TabDefinition definition, long generation, @NotNull String query) {
+        if (definition.list == null || definition.loading || !definition.moreAvailable) {
             return;
         }
 
-        this.modsLoading = true;
-        this.modsList.setLoadingMore(true);
+        definition.loading = true;
+        definition.list.setLoadingMore(true);
 
-        CompletableFuture<Modrinth.Page> future = Modrinth.searchModsPageAsync(query, this.nextModOffset, PAGE_SIZE);
+        CompletableFuture<Modrinth.Page> future = Modrinth.searchPageAsync(definition.type, query, definition.nextOffset, PAGE_SIZE);
         future.thenAccept(page -> {
             if (this.minecraft != null) {
-                this.minecraft.execute(() -> this.applyModsPage(generation, page));
+                this.minecraft.execute(() -> this.applyPage(definition, generation, page));
             }
         }).exceptionally(throwable -> {
             if (this.minecraft != null) {
-                this.minecraft.execute(() -> this.finishModsLoad(generation));
+                this.minecraft.execute(() -> this.finishLoad(definition, generation));
             }
             return null;
         });
     }
 
-    private void requestMoreResourcePacks(long generation, @NotNull String query) {
-        if (this.resourcePackList == null || this.resourcePacksLoading || !this.moreResourcePacksAvailable) {
+    private void applyPage(TabDefinition definition, long generation, Modrinth.Page page) {
+        if (generation != this.searchRequestId.get() || definition.list == null) {
             return;
         }
 
-        this.resourcePacksLoading = true;
-        this.resourcePackList.setLoadingMore(true);
-
-        CompletableFuture<Modrinth.Page> future = Modrinth.searchResourcePacksPageAsync(query, this.nextResourcePackOffset, PAGE_SIZE);
-        future.thenAccept(page -> {
-            if (this.minecraft != null) {
-                this.minecraft.execute(() -> this.applyResourcePackPage(generation, page));
-            }
-        }).exceptionally(throwable -> {
-            if (this.minecraft != null) {
-                this.minecraft.execute(() -> this.finishResourcePackLoad(generation));
-            }
-            return null;
-        });
-    }
-
-    private void applyModsPage(long generation, Modrinth.Page page) {
-        if (generation != this.searchRequestId.get() || this.modsList == null) {
-            return;
-        }
-
-        this.finishModsLoad(generation);
-        this.modsList.appendEntries(page.entries());
-        this.moreModsAvailable = page.nextOffset() != null;
-        this.modsList.setHasMoreEntries(this.moreModsAvailable);
+        this.finishLoad(definition, generation);
+        definition.list.appendEntries(page.entries());
+        definition.moreAvailable = page.nextOffset() != null;
+        definition.list.setHasMoreEntries(definition.moreAvailable);
         if (page.nextOffset() != null) {
-            this.nextModOffset = page.nextOffset();
+            definition.nextOffset = page.nextOffset();
         }
     }
 
-    private void applyResourcePackPage(long generation, Modrinth.Page page) {
-        if (generation != this.searchRequestId.get() || this.resourcePackList == null) {
-            return;
-        }
-
-        this.finishResourcePackLoad(generation);
-        this.resourcePackList.appendEntries(page.entries());
-        this.moreResourcePacksAvailable = page.nextOffset() != null;
-        this.resourcePackList.setHasMoreEntries(this.moreResourcePacksAvailable);
-        if (page.nextOffset() != null) {
-            this.nextResourcePackOffset = page.nextOffset();
-        }
-    }
-
-    private void finishModsLoad(long generation) {
+    private void finishLoad(TabDefinition definition, long generation) {
         if (generation != this.searchRequestId.get()) {
             return;
         }
 
-        this.modsLoading = false;
-        if (this.modsList != null) {
-            this.modsList.setLoadingMore(false);
-        }
-    }
-
-    private void finishResourcePackLoad(long generation) {
-        if (generation != this.searchRequestId.get()) {
-            return;
-        }
-
-        this.resourcePacksLoading = false;
-        if (this.resourcePackList != null) {
-            this.resourcePackList.setLoadingMore(false);
+        definition.loading = false;
+        if (definition.list != null) {
+            definition.list.setLoadingMore(false);
         }
     }
 
@@ -323,8 +270,8 @@ public class BrowseScreen extends Screen {
 
         if (this.exitButton != null) {
             this.exitButton.setMessage(this.downloadList.isEmpty()
-                ? CommonComponents.GUI_BACK
-                : Component.translatable("modbrowser.gui.browsescreen.buttons.download"));
+                    ? CommonComponents.GUI_BACK
+                    : Component.translatable("modbrowser.gui.browsescreen.buttons.download"));
         }
     }
 
@@ -355,7 +302,7 @@ public class BrowseScreen extends Screen {
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         super.render(guiGraphics, mouseX, mouseY, partialTick);
         int searchWidth = Math.min(240, this.width - 20);
-        guiGraphics.drawScrollingString(this.font, this.status, 10, (this.width - searchWidth) / 2 - 20,10, 0xA0A0A0);
+        guiGraphics.drawScrollingString(this.font, this.status, 10, (this.width - searchWidth) / 2 - 20, 10, 0xA0A0A0);
     }
 
     @Override
@@ -364,14 +311,13 @@ public class BrowseScreen extends Screen {
         this.renderMenuBackground(guiGraphics, 0, this.layout.getHeaderHeight(), this.width, this.height);
     }
 
-    private class ModsDiscoverTab extends GridLayoutTab {
-        private static final Component TITLE = Component.translatable("modbrowser.gui.browsescreen.tab.mods");
+    private class DiscoverTab extends GridLayoutTab {
 
-        ModsDiscoverTab() {
-            super(TITLE);
+        DiscoverTab(TabDefinition definition) {
+            super(definition.title);
             GridLayout.RowHelper rows = this.layout.rowSpacing(8).createRowHelper(1);
-            if (BrowseScreen.this.modsList != null) {
-                rows.addChild(BrowseScreen.this.modsList);
+            if (definition.list != null) {
+                rows.addChild(definition.list);
             }
         }
     }
@@ -384,18 +330,6 @@ public class BrowseScreen extends Screen {
             GridLayout.RowHelper rows = this.layout.rowSpacing(8).createRowHelper(1);
             if (BrowseScreen.this.downloadListView != null) {
                 rows.addChild(BrowseScreen.this.downloadListView);
-            }
-        }
-    }
-
-    private class ResourcePackDiscoverTab extends GridLayoutTab {
-        private static final Component TITLE = Component.translatable("modbrowser.gui.browsescreen.tab.resourcepacks");
-
-        ResourcePackDiscoverTab() {
-            super(TITLE);
-            GridLayout.RowHelper rows = this.layout.rowSpacing(8).createRowHelper(1);
-            if (BrowseScreen.this.resourcePackList != null) {
-                rows.addChild(BrowseScreen.this.resourcePackList);
             }
         }
     }

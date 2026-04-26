@@ -6,6 +6,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.TitleScreen;
+import net.minecraft.client.gui.screens.packs.PackSelectionScreen;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.api.distmarker.Dist;
@@ -34,8 +35,8 @@ public class ModBrowserClient {
     @SubscribeEvent
     public static void onScreenInit(ScreenEvent.Init.Post event) {
         Screen screen = event.getScreen();
+        String resourcePackTitle = I18n.get("resourcePack.title");
         if (screen instanceof TitleScreen){
-            // NeoForge/FML's mods button translation key (same one Create uses)
             String modsText = I18n.get("fml.menu.mods");
 
             AbstractWidget modsWidget = event.getListenersList().stream()
@@ -59,10 +60,9 @@ public class ModBrowserClient {
             int y = modsWidget.getY();
 
             event.addListener(new TexturedIconButton(x, y, myW, myH, ICON, b -> {
-                Minecraft.getInstance().setScreen(new BrowseScreen(screen));
+                Minecraft.getInstance().setScreen(BrowseScreen.modsAndResourcePacks(screen));
             }));
         } else if (screen instanceof ModListScreen) {
-            // NeoForge/FML's mods button translation key (same one Create uses)
             String openModsFolderText = I18n.get("fml.menu.mods.openmodsfolder");
 
             AbstractWidget modsWidget = event.getListenersList().stream()
@@ -86,7 +86,35 @@ public class ModBrowserClient {
             int y = modsWidget.getY();
 
             event.addListener(new TexturedIconButton(x, y, myW, myH, ICON, b -> {
-                Minecraft.getInstance().setScreen(new BrowseScreen(screen));
+                Minecraft.getInstance().setScreen(BrowseScreen.mods(screen));
+            }));
+        } else if (screen instanceof PackSelectionScreen && screen.getTitle().getString().equals(resourcePackTitle)) {
+            String openFolderText = I18n.get("pack.openFolder");
+
+
+
+            AbstractWidget modsWidget = event.getListenersList().stream()
+                    .filter(w -> w instanceof AbstractWidget)
+                    .map(w -> (AbstractWidget) w)
+                    .filter(w -> w.getMessage().getString().equals(openFolderText))
+                    .findFirst()
+                    .orElse(null);
+
+            if (modsWidget == null)
+                return; // Mods button not present (or key changed)
+
+            int myW = 20, myH = 20;
+            int padding = 6;
+
+            ResourceLocation ICON = ResourceLocation.fromNamespaceAndPath(
+                    ModBrowser.MODID, "textures/gui/buttons/browse_button.png"
+            );
+
+            int x = modsWidget.getX() - myW - padding;
+            int y = modsWidget.getY();
+
+            event.addListener(new TexturedIconButton(x, y, myW, myH, ICON, b -> {
+                Minecraft.getInstance().setScreen(BrowseScreen.resourcePacks(screen));
             }));
         }
 

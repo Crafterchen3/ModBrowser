@@ -32,12 +32,9 @@ public final class Modrinth {
     });
     private static final ModrinthAPI client = new ModrinthAPI();
 
-    public static CompletableFuture<Page> searchModsPageAsync(String query, int offset, int limit) {
-        return CompletableFuture.supplyAsync(() -> page(query, offset, limit, ProjectType.MOD), EXECUTOR);
-    }
 
-    public static CompletableFuture<Page> searchResourcePacksPageAsync(String query, int offset, int limit) {
-        return CompletableFuture.supplyAsync(() -> page(query, offset, limit, ProjectType.RESOURCEPACK), EXECUTOR);
+    public static CompletableFuture<Page> searchPageAsync(ProjectType type,String query, int offset, int limit) {
+        return CompletableFuture.supplyAsync(() -> page(query, offset, limit, type), EXECUTOR);
     }
 
     public static CompletableFuture<List<Mod>> resolveDependenciesAsync(List<Mod> mods) {
