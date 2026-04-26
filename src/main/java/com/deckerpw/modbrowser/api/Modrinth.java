@@ -67,7 +67,7 @@ public final class Modrinth {
         ArrayList<Mod> list = new ArrayList<>();
         for (Project hit : projects) {
             list.add(new Mod(
-                    hit.id, hit.slug, hit.iconUrl, hit.author, Component.literal(hit.name), Component.literal(hit.summary), projectType
+                    hit.id, hit.slug, hit.getIcon(), hit.author, Component.literal(hit.name), Component.literal(hit.summary), projectType
             ));
         }
         if (list.isEmpty())
@@ -95,7 +95,7 @@ public final class Modrinth {
                     if (resolved.stream().anyMatch(m -> m.id.equals(dependency.projectId)))
                         continue;
                     Project project = client.getProject(dependency.projectId).join();
-                    toVisit.add(new Mod(project.id, project.slug, project.iconUrl, project.author, Component.literal(project.name), Component.literal(project.summary), project.type));
+                    toVisit.add(new Mod(project.id, project.slug, project.getIcon(), project.author, Component.literal(project.name), Component.literal(project.summary), project.type));
                 }
             }
         }

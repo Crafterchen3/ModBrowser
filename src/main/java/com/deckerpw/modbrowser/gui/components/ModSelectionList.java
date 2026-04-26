@@ -1,5 +1,10 @@
 package com.deckerpw.modbrowser.gui.components;
 
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -7,15 +12,19 @@ import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 import com.deckerpw.modbrowser.data.Mod;
+import com.mojang.blaze3d.platform.NativeImage;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.ObjectSelectionList;
+import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.NotNull;
 
+import javax.imageio.ImageIO;
+
 public class ModSelectionList extends ObjectSelectionList<ModSelectionList.ListEntry> {
     private static final int ROW_HEIGHT = 40;
-    private static final int ICON_SIZE = 20;
+    private static final int ICON_SIZE = 30;
     private static final int ACTION_BUTTON_WIDTH = 56;
     private static final int ACTION_BUTTON_HEIGHT = 20;
     private static final int ACTION_BUTTON_RIGHT_PADDING = 6;
@@ -192,12 +201,31 @@ public class ModSelectionList extends ObjectSelectionList<ModSelectionList.ListE
             boolean showButton = ModSelectionList.this.addToDownloadCallback != null || ModSelectionList.this.removeFromDownloadCallback != null;
 
             // Simple placeholder icon: first letter over a tinted square.
-            guiGraphics.fill(iconLeft, iconTop, iconLeft + ICON_SIZE, iconTop + ICON_SIZE, 0xFF3A3A3A);
-            String firstLetter = this.info.name.getString().isEmpty()
-                ? "?"
-                : this.info.name.getString().substring(0, 1).toUpperCase(Locale.ROOT);
-            int letterWidth = ModSelectionList.this.minecraft.font.width(firstLetter);
-            guiGraphics.drawString(ModSelectionList.this.minecraft.font, firstLetter, iconLeft + (ICON_SIZE - letterWidth) / 2, iconTop + 6, 0xFFFFFFFF, false);
+
+            BufferedImage icon = this.info.icon;
+            if (icon != null) {
+                try {
+                    ByteArrayOutputStream os = new ByteArrayOutputStream();
+                    ImageIO.write(icon, "png", os);
+                    InputStream is = new ByteArrayInputStream(os.toByteArray());
+                    DynamicTexture texture = new DynamicTexture(NativeImage.read(is));
+                    texture.upload();
+                    guiGraphics.blit(
+                            Minecraft.getInstance().getTextureManager().register("temp_icon_" + this.info.id, texture),
+                            iconLeft,
+                            iconTop,
+                            0,
+                            0,
+                            ICON_SIZE,
+                            ICON_SIZE,
+                            ICON_SIZE,
+                            ICON_SIZE
+                    );
+                } catch (IOException e) {
+                    drawPlaceholder(guiGraphics, iconLeft, iconTop);
+                }
+            }else
+                drawPlaceholder(guiGraphics, iconLeft, iconTop);
 
             guiGraphics.drawString(ModSelectionList.this.minecraft.font, this.info.name, textLeft, top + 5, titleColor, false);
             if (this.info.version != null && removeFromDownloadCallback != null)
@@ -221,6 +249,15 @@ public class ModSelectionList extends ObjectSelectionList<ModSelectionList.ListE
                     0xFFFFFFFF
                 );
             }
+        }
+
+        private void drawPlaceholder(GuiGraphics guiGraphics, int iconLeft, int iconTop) {
+            guiGraphics.fill(iconLeft, iconTop, iconLeft + ICON_SIZE, iconTop + ICON_SIZE, 0xFF3A3A3A);
+            String firstLetter = this.info.name.getString().isEmpty()
+                ? "?"
+                : this.info.name.getString().substring(0, 1).toUpperCase(Locale.ROOT);
+            int letterWidth = ModSelectionList.this.minecraft.font.width(firstLetter);
+            guiGraphics.drawString(ModSelectionList.this.minecraft.font, firstLetter, iconLeft + (ICON_SIZE - letterWidth) / 2, iconTop + 6, 0xFFFFFFFF, false);
         }
 
         private int actionButtonLeft(int left, int width) {
