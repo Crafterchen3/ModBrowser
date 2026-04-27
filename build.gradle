@@ -158,6 +158,7 @@ dependencies {
 
 tasks.named('jar', Jar).configure {
     from(tasks.named('jarJar'))
+    archiveFileName = "ModBrowser-neoforge-${minecraft_version}-${mod_version}.jar"
 }
 
 // This block of code expands all declared replace properties in the specified resource targets.

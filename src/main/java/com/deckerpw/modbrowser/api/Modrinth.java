@@ -15,10 +15,7 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Deque;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -33,7 +30,7 @@ public final class Modrinth {
     private static final ModrinthAPI client = new ModrinthAPI();
 
 
-    public static CompletableFuture<Page> searchPageAsync(ProjectType type,String query, int offset, int limit) {
+    public static CompletableFuture<Page> searchPageAsync(ModType type,String query, int offset, int limit) {
         return CompletableFuture.supplyAsync(() -> page(query, offset, limit, type), EXECUTOR);
     }
 
@@ -45,26 +42,12 @@ public final class Modrinth {
         return CompletableFuture.runAsync(() -> downloadMod(mod), EXECUTOR);
     }
 
-    private static Facets facets(ProjectType projectType) {
-        Facets collection = null;
-        switch (projectType) {
-            case MOD -> collection = Facets.empty()
-                    .projectType(ProjectType.MOD)
-                    .category("neoforge")
-                    .version(ModBrowser.MC_VERSION);
-            case RESOURCEPACK -> collection = Facets.empty()
-                    .projectType(ProjectType.RESOURCEPACK)
-                    .version(ModBrowser.MC_VERSION);
-        }
-        return collection;
-    }
-
-    private static Page page(String query, int offset, int limit, ProjectType projectType) {
-        List<Project> projects = client.search(query, facets(projectType), offset, limit).join();
+    private static Page page(String query, int offset, int limit, ModType modType) {
+        List<Project> projects = client.search(query, modType.facets, offset, limit).join();
         ArrayList<Mod> list = new ArrayList<>();
         for (Project hit : projects) {
             list.add(new Mod(
-                    hit.id, hit.slug, hit.getIcon(), hit.author, Component.literal(hit.name), Component.literal(hit.summary), projectType
+                    hit.id, hit.slug, hit.getIcon(), hit.author, Component.literal(hit.name), Component.literal(hit.summary), modType
             ));
         }
         if (list.isEmpty())
@@ -80,10 +63,10 @@ public final class Modrinth {
             if (resolved.contains(mod))
                 continue;
             Version version;
-            if (mod.type == ProjectType.RESOURCEPACK) {
-                version = client.getProjectVersion(mod.slug, null, ModBrowser.MC_VERSION).join();
-            } else {
+            if (mod.type == ModType.MOD) {
                 version = client.getProjectVersion(mod.slug, "neoforge", ModBrowser.MC_VERSION).join();
+            } else {
+                version = client.getProjectVersion(mod.slug, null, ModBrowser.MC_VERSION).join();
             }
             mod.version = version;
             resolved.add(mod);
@@ -92,7 +75,7 @@ public final class Modrinth {
                     if (resolved.stream().anyMatch(m -> m.id.equals(dependency.projectId)))
                         continue;
                     Project project = client.getProject(dependency.projectId).join();
-                    toVisit.add(new Mod(project.id, project.slug, project.getIcon(), project.author, Component.literal(project.name), Component.literal(project.summary), project.type));
+                    toVisit.add(new Mod(project.id, project.slug, project.getIcon(), project.author, Component.literal(project.name), Component.literal(project.summary), Arrays.stream(ModType.values()).filter(type -> type.projectType == project.type).findFirst().orElseThrow()));
                 }
             }
         }
@@ -105,7 +88,7 @@ public final class Modrinth {
         Version.VersionFile file = mod.version.primaryFile;
         String url = file.url;
         Path destination = Minecraft.getInstance().gameDirectory.toPath()
-                .resolve(mod.type == ProjectType.MOD ? "mods" : "resourcepacks")
+                .resolve(mod.type.folder)
                 .resolve(file.filename);
         try {
             Files.createDirectories(destination.getParent());

@@ -14,7 +14,6 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
-import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.neoforge.client.event.ScreenEvent;
 import net.neoforged.neoforge.client.gui.ConfigurationScreen;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
@@ -60,7 +59,7 @@ public class ModBrowserClient {
             int y = modsWidget.getY();
 
             event.addListener(new TexturedIconButton(x, y, myW, myH, ICON, b -> {
-                Minecraft.getInstance().setScreen(BrowseScreen.modsAndResourcePacks(screen));
+                Minecraft.getInstance().setScreen(BrowseScreen.all(screen));
             }));
         } else if (screen instanceof ModListScreen) {
             String openModsFolderText = I18n.get("fml.menu.mods.openmodsfolder");
@@ -90,8 +89,6 @@ public class ModBrowserClient {
             }));
         } else if (screen instanceof PackSelectionScreen && screen.getTitle().getString().equals(resourcePackTitle)) {
             String openFolderText = I18n.get("pack.openFolder");
-
-
 
             AbstractWidget modsWidget = event.getListenersList().stream()
                     .filter(w -> w instanceof AbstractWidget)

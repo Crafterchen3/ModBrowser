@@ -1,5 +1,6 @@
 package com.deckerpw.modbrowser.data;
 
+import com.deckerpw.modbrowser.api.ModType;
 import com.deckerpw.modrinth.data.ProjectType;
 import com.deckerpw.modrinth.data.Version;
 import com.mojang.blaze3d.platform.NativeImage;
@@ -24,11 +25,11 @@ public class Mod {
     public final String author;
     public final Component name;
     public final Component summary;
-    public final ProjectType type;
+    public final ModType type;
     @Nullable
     public Version version;
 
-    public Mod(String id, String slug, BufferedImage iconImage, String author, Component name, Component summary, ProjectType type) {
+    public Mod(String id, String slug, BufferedImage iconImage, String author, Component name, Component summary, ModType type) {
         this.id = id;
         this.slug = slug;
         this.author = author;
@@ -46,7 +47,7 @@ public class Mod {
             InputStream is = new ByteArrayInputStream(os.toByteArray());
             icon = new DynamicTexture(NativeImage.read(is));
             icon.upload();
-        } catch (IOException ignored) {
+        } catch (Exception ignored) {
             icon = null;
         }
     }

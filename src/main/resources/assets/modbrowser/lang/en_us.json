@@ -20,6 +20,7 @@
   "modbrowser.gui.browsescreen.buttons.download": "Download Mods",
   "modbrowser.gui.browsescreen.tab.mods": "Mods",
   "modbrowser.gui.browsescreen.tab.resourcepacks": "Resource Packs",
+  "modbrowser.gui.browsescreen.tab.shaderpacks": "Shader Packs",
   "modbrowser.gui.browsescreen.tab.downloads": "Download List",
   "modbrowser.gui.browsescreen.search": "Search",
   "modbrowser.gui.browsescreen.placeholder.discover": "Discover content coming soon",

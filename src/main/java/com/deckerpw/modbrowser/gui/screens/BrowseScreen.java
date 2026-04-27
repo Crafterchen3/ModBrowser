@@ -1,5 +1,6 @@
 package com.deckerpw.modbrowser.gui.screens;
 
+import com.deckerpw.modbrowser.api.ModType;
 import com.deckerpw.modbrowser.api.Modrinth;
 import com.deckerpw.modbrowser.data.Mod;
 import com.deckerpw.modbrowser.data.TabDefinition;
@@ -23,7 +24,6 @@ import org.jetbrains.annotations.NotNull;
 import javax.annotation.Nullable;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
@@ -50,20 +50,21 @@ public class BrowseScreen extends Screen {
     private Component status = Component.empty();
     private Button exitButton;
 
-    public static BrowseScreen modsAndResourcePacks(Screen parent){
+    public static BrowseScreen all(Screen parent){
         return new BrowseScreen(parent, new TabDefinition[]{
-                new TabDefinition(com.deckerpw.modrinth.data.ProjectType.MOD, Component.translatable("modbrowser.gui.browsescreen.tab.mods")),
-                new TabDefinition(com.deckerpw.modrinth.data.ProjectType.RESOURCEPACK, Component.translatable("modbrowser.gui.browsescreen.tab.resourcepacks"))});
+                new TabDefinition(ModType.MOD, Component.translatable("modbrowser.gui.browsescreen.tab.mods")),
+                new TabDefinition(ModType.RESOURCE_PACK, Component.translatable("modbrowser.gui.browsescreen.tab.resourcepacks")),
+                new TabDefinition(ModType.SHADERS, Component.translatable("modbrowser.gui.browsescreen.tab.shaderpacks"))});
     }
 
     public static BrowseScreen mods(Screen parent){
         return new BrowseScreen(parent, new TabDefinition[]{
-                new TabDefinition(com.deckerpw.modrinth.data.ProjectType.MOD, Component.translatable("modbrowser.gui.browsescreen.tab.mods"))});
+                new TabDefinition(ModType.MOD, Component.translatable("modbrowser.gui.browsescreen.tab.mods"))});
     }
 
     public static BrowseScreen resourcePacks(Screen parent){
         return new BrowseScreen(parent, new TabDefinition[]{
-                new TabDefinition(com.deckerpw.modrinth.data.ProjectType.RESOURCEPACK, Component.translatable("modbrowser.gui.browsescreen.tab.resourcepacks"))});
+                new TabDefinition(ModType.RESOURCE_PACK, Component.translatable("modbrowser.gui.browsescreen.tab.resourcepacks"))});
     }
 
     public BrowseScreen(Screen parent, TabDefinition[] tabDefinitions) {
